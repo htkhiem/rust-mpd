@@ -39,6 +39,8 @@ pub mod version;
 pub mod reply;
 pub mod status;
 pub mod song;
+pub mod directory;
+pub mod lsinfo;
 pub mod output;
 pub mod playlist;
 pub mod plugin;

@@ -11,6 +11,7 @@ use std::fmt;
 use std::io::{self, Lines, Read, Write};
 use std::result::Result as StdResult;
 use std::str::FromStr;
+use fxhash::FxHashSet;
 
 pub struct Pairs<I>(pub I);
 
@@ -83,11 +84,77 @@ where I: Iterator<Item = io::Result<String>>
     }
 }
 
+
+// Variant of Maps that can take multiple separators. Used for lsinfo.
+pub struct MultiSepMaps<'a, I: 'a> {
+    pairs: &'a mut Pairs<I>,
+    seps: FxHashSet<&'static str>,
+    last_sep: Option<String>,
+    value: Option<String>,
+    done: bool,
+    first: bool,
+}
+
+impl<'a, I> Iterator for MultiSepMaps<'a, I>
+where I: Iterator<Item = io::Result<String>>
+{
+    type Item = Result<Vec<(String, String)>>;
+    fn next(&mut self) -> Option<Result<Vec<(String, String)>>> {
+        if self.done {
+            return None;
+        }
+
+        let mut map = Vec::new();
+
+        if let (Some(v), Some(k)) = (self.value.take(), self.last_sep.take())  {
+            map.push((k, v));
+        }
+
+        loop {
+            match self.pairs.next() {
+                Some(Ok((a, b))) => {
+                    if self.seps.contains(&a as &str) {
+                        self.value = Some(b);
+                        self.last_sep = Some(a);
+                        if self.first {
+                            self.first = false;
+                            return self.next();
+                        }
+                        break;
+                    } else {
+                        map.push((a, b));
+                    }
+                }
+                Some(Err(e)) => return Some(Err(e)),
+                None => {
+                    self.done = true;
+                    break;
+                }
+            }
+        }
+
+        if map.is_empty() {
+            None
+        } else {
+            Some(Ok(map))
+        }
+    }
+}
+
+
 impl<I> Pairs<I>
 where I: Iterator<Item = io::Result<String>>
 {
     pub fn split<'a, 'b: 'a>(&'a mut self, f: &'b str) -> Maps<'a, I> {
         Maps { pairs: self, sep: f, value: None, done: false, first: true }
+    }
+
+    pub fn split_multisep<'a, 'b: 'a>(&'a mut self, f: &[&'static str]) -> MultiSepMaps<'a, I> {
+        let mut seps: FxHashSet<&'static str> = FxHashSet::default();
+        for elem in f {
+            seps.insert(elem);
+        }
+        MultiSepMaps { pairs: self, seps, last_sep: None, value: None, done: false, first: true }
     }
 }
 
@@ -106,6 +173,11 @@ pub trait Proto {
     fn read_structs<'a, T>(&'a mut self, key: &'static str) -> Result<Vec<T>>
     where T: 'a + FromIter {
         self.read_pairs().split(key).map(|v| v.and_then(|v| FromIter::from_iter(v.into_iter().map(Ok)))).collect()
+    }
+
+    fn read_multisep_structs<'a, T>(&'a mut self, keys: &[&'static str]) -> Result<Vec<T>>
+    where T: 'a + FromIter {
+        self.read_pairs().split_multisep(keys).map(|v| v.and_then(|v| FromIter::from_iter(v.into_iter().map(Ok)))).collect()
     }
 
     fn read_list(&mut self, key: &'static str) -> Result<Vec<String>> {
@@ -201,7 +273,6 @@ argument_for_display! {f32}
 argument_for_display! {f64}
 argument_for_display! {usize}
 argument_for_display! {crate::status::ReplayGain}
-argument_for_display! {String}
 argument_for_display! {crate::song::Id}
 argument_for_display! {crate::song::Range}
 argument_for_display! {crate::message::Channel}

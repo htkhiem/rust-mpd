@@ -286,23 +286,29 @@ impl ToSongRange for song::Range {
 // }}}
 
 pub trait ToSongPath {
-    fn to_path(&self) -> &str;
+    fn to_song_path(&self) -> &str;
+}
+
+impl ToSongPath for String {
+    fn to_song_path(&self) -> &str {
+        self.as_str()
+    }
 }
 
 impl ToSongPath for Song {
-    fn to_path(&self) -> &str {
+    fn to_song_path(&self) -> &str {
         &self.file
     }
 }
 
 impl<'a, T: ToSongPath> ToSongPath for &'a T {
-    fn to_path(&self) -> &str {
-        (*self).to_path()
+    fn to_song_path(&self) -> &str {
+        (*self).to_song_path()
     }
 }
 
 impl ToSongPath for dyn AsRef<str> {
-    fn to_path(&self) -> &str {
+    fn to_song_path(&self) -> &str {
         self.as_ref()
     }
 }
@@ -310,7 +316,7 @@ impl ToSongPath for dyn AsRef<str> {
 impl<T: ToSongPath> ToArguments for T {
     fn to_arguments<F, E>(&self, f: &mut F) -> Result<(), E>
     where F: FnMut(&str) -> Result<(), E> {
-        self.to_path().to_arguments(f)
+        self.to_song_path().to_arguments(f)
     }
 }
 

@@ -8,6 +8,7 @@ use bufstream::BufStream;
 
 use crate::convert::*;
 use crate::error::{Error, ParseError, ProtoError, Result};
+use crate::lsinfo::LsInfoEntry;
 use crate::message::{Channel, Message};
 use crate::mount::{Mount, Neighbor};
 use crate::output::Output;
@@ -15,7 +16,7 @@ use crate::playlist::Playlist;
 use crate::plugin::Plugin;
 use crate::proto::*;
 use crate::search::{Query, Term, Window};
-use crate::song::{Id, Song};
+use crate::song::{Id, PosIdChange, Song};
 use crate::stats::Stats;
 use crate::status::{ReplayGain, Status};
 use crate::sticker::Sticker;
@@ -225,6 +226,14 @@ impl<S: Read + Write> Client<S> {
     /// List all changes in a queue since given version
     pub fn changes(&mut self, version: u32) -> Result<Vec<Song>> {
         self.run_command("plchanges", version).and_then(|_| self.read_structs("file"))
+    }
+
+    /// List all changes in a queue since given version.
+    /// This function only returns the position and the id of the changed song, not the complete metadata.
+    /// This is more bandwidth efficient. To detect songs that were deleted at the end of the playlist,
+    /// use playlistlength returned by status command.
+    pub fn changesposid(&mut self, version: u32) -> Result<Vec<PosIdChange>> {
+        self.run_command("plchangesposid", version).and_then(|_| self.read_structs("cpos"))
     }
 
     /// Append a song into a queue
@@ -440,8 +449,9 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// Lists the contents of a directory.
-    pub fn lsinfo<P: ToSongPath>(&mut self, path: P) -> Result<Vec<Song>> {
-        self.run_command("lsinfo", path).and_then(|_| self.read_structs("file"))
+    pub fn lsinfo<P: ToSongPath>(&mut self, path: P) -> Result<Vec<LsInfoEntry>> {
+        // TODO: add playlist support
+        self.run_command("lsinfo", path).and_then(|_| self.read_multisep_structs(&["file", "directory"]))
     }
 
     /// Returns raw metadata for file

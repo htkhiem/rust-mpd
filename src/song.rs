@@ -142,3 +142,32 @@ impl FromIter for Song {
         Ok(result)
     }
 }
+
+
+/// A pair of position and ID as returned by the `plchangesposid` command.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct PosIdChange {
+    /// 0-based queue position
+    pub pos: u32,
+    /// queue ID
+    pub id: Id
+}
+
+impl FromIter for PosIdChange {
+    /// build PosIdChange from map
+    fn from_iter<I: Iterator<Item = Result<(String, String), Error>>>(iter: I) -> Result<PosIdChange, Error> {
+        let mut result = PosIdChange::default();
+
+        for res in iter {
+            let line = res?;
+            match &*line.0 {
+                "cpos" => result.pos = line.1.parse::<u32>()?,
+                "Id" => result.id = Id(line.1.parse::<u32>()?),
+                _ => {}
+            }
+        }
+
+        Ok(result)
+    }
+}
