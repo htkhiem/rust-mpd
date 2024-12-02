@@ -322,7 +322,9 @@ impl ToSongPath for dyn AsRef<str> {
 impl<T: ToSongPath> ToArguments for T {
     fn to_arguments<F, E>(&self, f: &mut F) -> Result<(), E>
     where F: FnMut(&str) -> Result<(), E> {
-        self.to_song_path().to_arguments(f)
+        self
+            .to_song_path()
+            .to_arguments(f)
     }
 }
 
