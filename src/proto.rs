@@ -249,12 +249,12 @@ impl ToArguments for () {
     }
 }
 
-impl<'a> ToArguments for &'a str {
-    fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
-    where F: FnMut(&str) -> StdResult<(), E> {
-        f(self)
-    }
-}
+// impl<'a> ToArguments for &'a str {
+//     fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
+//     where F: FnMut(&str) -> StdResult<(), E> {
+//         f(self)
+//     }
+// }
 
 macro_rules! argument_for_display {
     ( $x:path ) => {

@@ -295,6 +295,12 @@ impl ToSongPath for String {
     }
 }
 
+impl ToSongPath for &str {
+    fn to_song_path(&self) -> &str {
+        self
+    }
+}
+
 impl ToSongPath for Song {
     fn to_song_path(&self) -> &str {
         &self.file
