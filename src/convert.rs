@@ -295,12 +295,6 @@ impl ToSongPath for String {
     }
 }
 
-impl ToSongPath for &str {
-    fn to_song_path(&self) -> &str {
-        self
-    }
-}
-
 impl ToSongPath for Song {
     fn to_song_path(&self) -> &str {
         &self.file
@@ -325,6 +319,13 @@ impl<T: ToSongPath> ToArguments for T {
         self
             .to_song_path()
             .to_arguments(f)
+    }
+}
+
+impl<'a> ToArguments for &'a str {
+    fn to_arguments<F, E>(&self, f: &mut F) -> Result<(), E>
+    where F: FnMut(&str) -> Result<(), E> {
+        f(self)
     }
 }
 
