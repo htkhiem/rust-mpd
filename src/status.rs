@@ -50,7 +50,8 @@ pub struct Status {
     pub audio: Option<AudioFormat>,
     /// current DB updating job number (if DB updating is in progress)
     pub updating_db: Option<u32>,
-    /// last player error (if happened, can be reset with `clearerror()` method)
+    /// last player error (if happened, can be reset with
+    /// [`clearerror()`](crate::Client::clearerror) method)
     pub error: Option<String>,
     /// replay gain mode
     pub replaygain: Option<ReplayGain>,
@@ -97,9 +98,8 @@ impl FromIter for Status {
                         _ => Ok(None),
                     }?;
                 }
-                // TODO" => float errors don't work on stable
-                "elapsed" => result.elapsed = line.1.parse::<f32>().ok().map(|v| Duration::from_millis((v * 1000.0) as u64)),
-                "duration" => result.duration = line.1.parse::<f32>().ok().map(|v| Duration::from_millis((v * 1000.0) as u64)),
+                "elapsed" => result.elapsed = Some(Duration::try_from_secs_f64(line.1.parse()?)?),
+                "duration" => result.duration = Some(Duration::try_from_secs_f64(line.1.parse()?)?),
                 "bitrate" => result.bitrate = Some(line.1.parse()?),
                 "xfade" => result.crossfade = Some(Duration::from_secs(line.1.parse()?)),
                 "mixrampdb" => result.mixrampdb = line.1.parse::<f32>()?,

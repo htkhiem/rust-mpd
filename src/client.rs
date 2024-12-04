@@ -1,8 +1,8 @@
 //! This module defines client data structure — the main entry point to MPD communication
 //!
-//! Almost every method of the `Client` structure corresponds to some command in [MPD protocol][proto].
+//! Almost every method of the [`Client`] structure corresponds to some command in [MPD protocol][proto].
 //!
-//! [proto]: http://www.musicpd.org/doc/protocol/
+//! [proto]: https://www.musicpd.org/doc/protocol/
 
 use bufstream::BufStream;
 
@@ -199,9 +199,14 @@ impl<S: Read + Write> Client<S> {
         self.run_command("playlistinfo", ()).and_then(|_| self.read_structs("file"))
     }
 
-    /// lists all songs in the database
+    /// Lists all songs in the database
     pub fn listall(&mut self) -> Result<Vec<Song>> {
         self.run_command("listall", ()).and_then(|_| self.read_structs("file"))
+    }
+
+    /// Lists all songs in the database with metadata
+    pub fn listallinfo(&mut self) -> Result<Vec<Song>> {
+        self.run_command("listallinfo", ()).and_then(|_| self.read_structs("file"))
     }
 
     /// Get current playing song
@@ -388,7 +393,7 @@ impl<S: Read + Write> Client<S> {
     // Database search {{{
     // TODO: count tag needle [...] [group] [grouptag], find type what [...] [window start:end]
     // TODO: search type what [...] [window start:end], searchadd type what [...]
-    // TODO: listallinfo [uri], listfiles [uri]
+    // TODO: listfiles [uri]
     // TODO: list type [filtertype] [filterwhat] [...] [group] [grouptype] [...]
     // TODO: searchaddpl name type what [...]
 
