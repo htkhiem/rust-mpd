@@ -167,6 +167,8 @@ pub trait Proto {
     fn read_line(&mut self) -> Result<String>;
     fn read_pairs(&mut self) -> Pairs<Lines<&mut BufStream<Self::Stream>>>;
 
+    fn run_command_list<I>(&mut self, commands_args: &[(&str, I)]) -> Result<()>
+    where I: ToArguments;
     fn run_command<I>(&mut self, command: &str, arguments: I) -> Result<()>
     where I: ToArguments;
 
@@ -216,7 +218,6 @@ pub trait Proto {
 
     fn read_pair(&mut self) -> Result<(String, String)> {
         let line = self.read_line()?;
-
         match line.parse::<Reply>() {
             Ok(Reply::Pair(a, b)) => Ok((a, b)),
             Ok(Reply::Ok) => Err(Error::Proto(ProtoError::NotPair)),
@@ -233,6 +234,35 @@ pub trait Proto {
             Ok(b.parse::<T>().map_err(Into::<ParseError>::into)?)
         } else {
             Err(Error::Proto(ProtoError::NoField(field)))
+        }
+    }
+
+    /// Parse a list of fields instead of just one. Currently used to parse
+    /// return values from a (homogeneous) command list. It does not support command
+    /// lists made up of different commands for now.
+    /// It must be used with command_list_begin (i.e. if the whole list is successfully
+    /// executed, then only one OK is returned at the end).
+    fn read_fields<T: FromStr>(&mut self, field: &'static str) -> Result<Vec<T>>
+    where ParseError: From<T::Err> {
+        let mut res: Vec<T> = Vec::new();
+        loop {
+            let line_res = self.read_line()?.parse::<Reply>();
+            match line_res {
+                Ok(Reply::Pair(a, b)) => {
+                    if &*a == field {
+                        res.push(b.parse::<T>().map_err(Into::<ParseError>::into)?);
+                    } else {
+                        return Err(Error::Proto(ProtoError::NoField(field)));
+                    }
+                },
+                Ok(Reply::Ok) => {
+                    // Encountered an OK, which means we've gone through all
+                    // of the responses.
+                    return Ok(res);
+                },
+                Ok(Reply::Ack(e)) => { return Err(Error::Server(e)); }
+                Err(e) => { return Err(Error::Parse(e)); }
+            }
         }
     }
 }

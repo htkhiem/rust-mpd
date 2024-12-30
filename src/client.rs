@@ -241,9 +241,23 @@ impl<S: Read + Write> Client<S> {
         self.run_command("plchangesposid", version).and_then(|_| self.read_structs("cpos"))
     }
 
-    /// Append a song into a queue
+    /// Append a song into the queue
     pub fn push<P: ToSongPath>(&mut self, path: P) -> Result<Id> {
         self.run_command("addid", path).and_then(|_| self.read_field("Id")).map(Id)
+    }
+
+    /// Append multiple songs into the queue. This is more efficient than calling push() multiple times
+    /// as it makes use of the command list interface, sending all commands at once and receiving a
+    /// single reply. It will also only trigger a single idle message to other clients.
+    pub fn push_multiple<P: ToSongPath>(&mut self, paths: &[P]) -> Result<Vec<Id>> {
+        self.run_command_list(
+            &paths
+                .iter()
+                .map(|p: &P| {("addid", p)})
+                .collect::<Vec<(&str, &P)>>()
+        ).and_then(|_| self.read_fields::<u32>("Id")).map(
+            |ids| {ids.iter().map(|id| {Id(*id)}).collect()}
+        )
     }
 
     /// Insert a song into a given position in a queue
@@ -692,6 +706,25 @@ impl<S: Read + Write> Proto for Client<S> {
         let key = split.next().ok_or(ParseError::BadPair)?;
         let val = split.next().ok_or(ParseError::BadPair)?;
         Ok((key.to_string(), val.to_string()))
+    }
+
+    fn run_command_list<I>(&mut self, commands_args: &[(&str, I)]) -> Result<()>
+    where I: ToArguments {
+        self.socket.write_all("command_list_begin".as_bytes())
+            .and_then(|_| self.socket.write(&[0x0a]))
+            .and_then(|_| self.socket.flush())?;
+
+        for tup in commands_args {
+            self.socket
+                .write_all(tup.0.as_bytes())
+                .and_then(|_| tup.1.to_arguments(&mut |arg| write!(self.socket, " {}", Quoted(arg))))
+                .and_then(|_| self.socket.write(&[0x0a]))
+                .and_then(|_| self.socket.flush())?;
+        }
+        self.socket.write_all("command_list_end".as_bytes())
+            .and_then(|_| self.socket.write(&[0x0a]))
+            .and_then(|_| self.socket.flush())
+            .map_err(From::from)
     }
 
     fn run_command<I>(&mut self, command: &str, arguments: I) -> Result<()>
