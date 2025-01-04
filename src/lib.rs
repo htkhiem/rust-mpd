@@ -59,7 +59,7 @@ pub use idle::{Idle, Subsystem};
 pub use message::{Channel, Message};
 pub use mount::{Mount, Neighbor};
 pub use output::Output;
-pub use playlist::Playlist;
+pub use playlist::{Playlist, SaveMode};
 pub use plugin::Plugin;
 pub use search::{Query, Term};
 pub use song::{Id, Song};

@@ -12,7 +12,7 @@ use crate::lsinfo::LsInfoEntry;
 use crate::message::{Channel, Message};
 use crate::mount::{Mount, Neighbor};
 use crate::output::Output;
-use crate::playlist::Playlist;
+use crate::playlist::{Playlist, SaveMode};
 use crate::plugin::Plugin;
 use crate::proto::*;
 use crate::search::{Query, Term, Window};
@@ -354,10 +354,13 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// Save current queue into playlist
-    ///
-    /// If playlist with given name doesn't exist, create new one.
-    pub fn save<N: ToPlaylistName>(&mut self, name: N) -> Result<()> {
-        self.run_command("save", name.to_name()).and_then(|_| self.expect_ok())
+    pub fn save<N: ToPlaylistName>(&mut self, name: N, mode: Option<SaveMode>) -> Result<()> {
+        if let Some(mode) = mode {
+            self.run_command("save", (name.to_name(), mode.as_str())).and_then(|_| self.expect_ok())
+        }
+        else {
+            self.run_command("save", name.to_name()).and_then(|_| self.expect_ok())
+        }
     }
 
     /// Rename playlist
