@@ -12,7 +12,7 @@ use crate::lsinfo::LsInfoEntry;
 use crate::message::{Channel, Message};
 use crate::mount::{Mount, Neighbor};
 use crate::output::Output;
-use crate::playlist::{Playlist, SaveMode};
+use crate::playlist::{Playlist, EditAction, SaveMode};
 use crate::plugin::Plugin;
 use crate::proto::*;
 use crate::search::{Query, Term, Window};
@@ -391,6 +391,28 @@ impl<S: Read + Write> Client<S> {
     /// Move song in a playlist from one position into another
     pub fn pl_shift<N: ToPlaylistName>(&mut self, name: N, from: u32, to: u32) -> Result<()> {
         self.run_command("playlistmove", (name.to_name(), from, to)).and_then(|_| self.expect_ok())
+    }
+
+    /// Convenience method to pack multiple playlist edit actions into one command list.
+    /// They will be executed sequentially but will only result in one idle message being
+    /// sent out to clients, avoiding repeated refreshes.
+    pub fn pl_edit<I>(&mut self, actions: &[EditAction]) -> Result<()> where I: ToArguments {
+        self.socket.write_all("command_list_begin".as_bytes())
+            .and_then(|_| self.socket.write(&[0x0a]))
+            .and_then(|_| self.socket.flush())?;
+
+        for action in actions {
+            self.socket
+                .write_all(action.command().as_bytes())
+                .and_then(|_| action.to_arguments(&mut |arg| write!(self.socket, " {}", Quoted(arg))))
+                .and_then(|_| self.socket.write(&[0x0a]))
+                .and_then(|_| self.socket.flush())?;
+        }
+        self.socket.write_all("command_list_end".as_bytes())
+            .and_then(|_| self.socket.write(&[0x0a]))
+            .and_then(|_| self.socket.flush())
+            .map_err(From::from)
+
     }
     // }}}
 
