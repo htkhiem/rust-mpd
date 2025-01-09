@@ -272,7 +272,7 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// Move a song (at a some position) or several songs (in a range) to other position in queue
-    pub fn shift<T: ToQueueRangeOrPlace>(&mut self, from: T, to: usize) -> Result<()> {
+    pub fn shift<T: ToQueueRangeOrPlace>(&mut self, from: T, to: &str) -> Result<()> {
         let command = if T::is_id() { "moveid" } else { "move" };
         self.run_command(command, (from.to_range(), to)).and_then(|_| self.expect_ok())
     }
@@ -389,14 +389,14 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// Move song in a playlist from one position into another
-    pub fn pl_shift<N: ToPlaylistName>(&mut self, name: N, from: u32, to: u32) -> Result<()> {
+    pub fn pl_shift<N: ToPlaylistName>(&mut self, name: N, from: u32, to: &str) -> Result<()> {
         self.run_command("playlistmove", (name.to_name(), from, to)).and_then(|_| self.expect_ok())
     }
 
     /// Convenience method to pack multiple playlist edit actions into one command list.
     /// They will be executed sequentially but will only result in one idle message being
     /// sent out to clients, avoiding repeated refreshes.
-    pub fn pl_edit<I>(&mut self, actions: &[EditAction]) -> Result<()> where I: ToArguments {
+    pub fn pl_edit(&mut self, actions: &[EditAction]) -> Result<()> {
         self.socket.write_all("command_list_begin".as_bytes())
             .and_then(|_| self.socket.write(&[0x0a]))
             .and_then(|_| self.socket.flush())?;
@@ -411,8 +411,9 @@ impl<S: Read + Write> Client<S> {
         self.socket.write_all("command_list_end".as_bytes())
             .and_then(|_| self.socket.write(&[0x0a]))
             .and_then(|_| self.socket.flush())
+            .inspect(|r| {println!("{:?}", &r)})
             .map_err(From::from)
-
+            .and_then(|_| self.expect_ok())
     }
     // }}}
 

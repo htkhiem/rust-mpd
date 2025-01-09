@@ -171,7 +171,6 @@ impl<'a> ToArguments for &'a Query<'a> {
                     Ok(())
                 })?;
             }
-            // println!("Singly escaped query string: {}", &qs);
             f(&qs)
         } else {
             Ok(())

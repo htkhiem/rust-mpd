@@ -4,6 +4,7 @@ use crate::convert::FromMap;
 use crate::error::{Error, ProtoError};
 use crate::proto::*;
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 /// Save mode when calling save().
@@ -36,46 +37,46 @@ impl SaveMode {
 /// commands must refer to song positions as modified by preceding ones.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
-pub enum EditAction {
+pub enum EditAction<'a> {
     /// Add a new song.
     ///
     /// Fields: playlist name, song URI, optional position in playlist.
-    Add(String, String, Option<u32>),
+    Add(Cow<'a, str>, Cow<'a, str>, Option<u32>),
     /// Clear all songs in this playlist.
-    Clear(String),
+    Clear(Cow<'a, str>),
     /// Move song from one position to another, such that it will be at the given new
     /// position. For example, moving song at pos 0 to 1 means the first song will swap
     /// places with the next one.
     ///
     /// Fields: playlist name, old position, new position.
-    Move(String, u32, u32),
+    Move(Cow<'a, str>, u32, u32),
     /// Remove the song at the given position from the playlist of the given name.
     ///
     /// Fields: playlist name, position to remove.
-    Delete(String, u32)
+    Delete(Cow<'a, str>, u32)
 }
 
-impl ToArguments for EditAction {
+impl<'a> ToArguments for EditAction<'a> {
     fn to_arguments<F, E>(&self, f: &mut F) -> Result<(), E>
     where F: FnMut(&str) -> Result<(), E> {
         // This will only write the arguments, not the command, of this action
         match self {
             Self::Add(name, uri, opt_pos) => {
                 if let Some(pos) = opt_pos {
-                    (name.as_str(), uri.as_str(), *pos).to_arguments(f)
+                    (name, uri, *pos).to_arguments(f)
                 }
                 else {
-                    (name.as_str(), uri.as_str()).to_arguments(f)
+                    (name, uri).to_arguments(f)
                 }
             },
-            Self::Clear(name) => name.as_str().to_arguments(f),
-            Self::Move(name, old, new) => (name.as_str(), *old, *new).to_arguments(f),
-            Self::Delete(name, pos) => (name.as_str(), *pos).to_arguments(f)
+            Self::Clear(name) => name.to_arguments(f),
+            Self::Move(name, old, new) => (name, *old, *new).to_arguments(f),
+            Self::Delete(name, pos) => (name, *pos).to_arguments(f)
         }
     }
 }
 
-impl EditAction {
+impl<'a> EditAction<'a> {
     /// Get the corresponding command word
     pub fn command(&self) -> &'static str {
         match self {

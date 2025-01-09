@@ -7,6 +7,7 @@ use crate::convert::FromIter;
 use crate::error::{Error, ParseError, ProtoError, Result};
 use crate::reply::Reply;
 
+use std::borrow::Cow;
 use std::fmt;
 use std::io::{self, Lines, Read, Write};
 use std::result::Result as StdResult;
@@ -279,12 +280,12 @@ impl ToArguments for () {
     }
 }
 
-// impl<'a> ToArguments for &'a str {
-//     fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
-//     where F: FnMut(&str) -> StdResult<(), E> {
-//         f(self)
-//     }
-// }
+impl <'a> ToArguments for &Cow<'a, str> {
+    fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
+    where F: FnMut(&str) -> StdResult<(), E> {
+        f(self)
+    }
+}
 
 macro_rules! argument_for_display {
     ( $x:path ) => {
@@ -296,6 +297,7 @@ macro_rules! argument_for_display {
         }
     };
 }
+
 argument_for_display! {i8}
 argument_for_display! {u8}
 argument_for_display! {u32}
