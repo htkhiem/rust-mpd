@@ -341,8 +341,16 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all songs in a playlist
-    pub fn playlist<T: ToQueueRange, N: ToPlaylistName>(&mut self, name: N, range: T) -> Result<Vec<Song>> {
-        self.run_command("listplaylistinfo", (name.to_name(), range.to_range())).and_then(|_| self.read_structs("file"))
+    ///
+    /// Warning: specifying range is only supported on MPD 0.24+. Doing so while connected
+    /// to an older instance will result in a ServerError.
+    pub fn playlist<T: ToQueueRange, N: ToPlaylistName>(&mut self, name: N, range: Option<T>) -> Result<Vec<Song>> {
+        if let Some(range) = range {
+            self.run_command("listplaylistinfo", (name.to_name(), range.to_range())).and_then(|_| self.read_structs("file"))
+        }
+        else {
+            self.run_command("listplaylistinfo", name.to_name()).and_then(|_| self.read_structs("file"))
+        }
     }
 
     /// Load playlist into queue
