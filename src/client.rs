@@ -7,7 +7,7 @@
 use bufstream::BufStream;
 
 use crate::convert::*;
-use crate::error::{Error, ParseError, ProtoError, Result};
+use crate::error::{Error, ProtoError, Result};
 use crate::lsinfo::LsInfoEntry;
 use crate::message::{Channel, Message};
 use crate::mount::{Mount, Neighbor};
@@ -734,13 +734,13 @@ impl<S: Read + Write> Proto for Client<S> {
         Pairs((&mut self.socket).lines())
     }
 
-    fn read_pair(&mut self) -> Result<(String, String)> {
-        let line = self.read_line()?;
-        let mut split = line.split(": ");
-        let key = split.next().ok_or(ParseError::BadPair)?;
-        let val = split.next().ok_or(ParseError::BadPair)?;
-        Ok((key.to_string(), val.to_string()))
-    }
+    // fn read_pair(&mut self) -> Result<(String, String)> {
+    //     let line = self.read_line()?;
+    //     let mut split = line.split(": ");
+    //     let key = split.next().ok_or(ParseError::BadPair)?;
+    //     let val = split.next().ok_or(ParseError::BadPair)?;
+    //     Ok((key.to_string(), val.to_string()))
+    // }
 
     fn run_command_list<I>(&mut self, commands_args: &[(&str, I)]) -> Result<()>
     where I: ToArguments {
