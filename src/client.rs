@@ -478,6 +478,29 @@ impl<S: Read + Write> Client<S> {
         }
         Ok(buf)
     }
+    // Read embedded album art
+    pub fn readpicture<P: ToSongPath>(&mut self, path: &P) -> Result<Vec<u8>> {
+        let mut buf = vec![];
+        loop {
+            self.run_command("readpicture", (path, &*format!("{}", buf.len())))?;
+            let (_, size) = self.read_pair()?;
+            let (_, _mime) = self.read_pair()?;
+            let (_, bytes) = self.read_pair()?;
+            let mut chunk = self.read_bytes(bytes.parse()?)?;
+            buf.append(&mut chunk);
+            // Read empty newline
+            let _ = self.read_line()?;
+            let result = self.read_line()?;
+            if result != "OK" {
+                return Err(ProtoError::NotOk)?;
+            }
+
+            if size.parse::<usize>()? == buf.len() {
+                break;
+            }
+        }
+        Ok(buf)
+    }
 
     /// Case-insensitively search for songs matching Query conditions.
     pub fn search<W>(&mut self, query: &Query, window: W) -> Result<Vec<Song>>
