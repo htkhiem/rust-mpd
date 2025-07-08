@@ -265,6 +265,23 @@ impl<S: Read + Write> Client<S> {
         self.run_command("addid", (path, pos)).and_then(|_| self.read_field("Id"))
     }
 
+    /// Insert multiple songs into a given position in a queue
+    pub fn insert_multiple<P: ToSongPath>(&mut self, paths: &[P], pos: usize) -> Result<Vec<usize>> {
+        let mut pos = pos;
+        self.run_command_list(
+            &paths
+                .iter()
+                .map(|p: &P| {
+                    let current_pos = pos;
+                    pos += 1;
+                    ("addid", (p, current_pos))
+                })
+                .collect::<Vec<(&str, (&P, usize))>>()
+        ).and_then(|_| self.read_fields::<u32>("Id")).map(
+            |ids| {ids.iter().map(|id| {*id as usize}).collect()}
+        )
+    }
+
     /// Delete a song (at some position) or several songs (in a range) from a queue
     pub fn delete<T: ToQueueRangeOrPlace>(&mut self, pos: T) -> Result<()> {
         let command = if T::is_id() { "deleteid" } else { "delete" };
