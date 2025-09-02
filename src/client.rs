@@ -96,6 +96,12 @@ impl<S: Read + Write> Client<S> {
         self.run_command("setvol", volume).and_then(|_| self.expect_ok())
     }
 
+    /// Read the volume. The result is a volume: line like in status.
+    /// If there is no mixer, MPD will emit an empty response.
+    pub fn getvol(&mut self) -> Result<i8> {
+        self.run_command("getvol", ()).and_then(|_| self.read_field::<i8>("volume"))
+    }
+
     /// Set repeat state
     pub fn repeat(&mut self, value: bool) -> Result<()> {
         self.run_command("repeat", value as u8).and_then(|_| self.expect_ok())
@@ -495,7 +501,7 @@ impl<S: Read + Write> Client<S> {
         }
         Ok(buf)
     }
-    // Read embedded album art
+    /// Read embedded album art
     pub fn readpicture<P: ToSongPath>(&mut self, path: &P) -> Result<Vec<u8>> {
         let mut buf = vec![];
         loop {
