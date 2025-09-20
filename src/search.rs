@@ -4,7 +4,6 @@
 
 use crate::proto::{Quoted, ToArguments};
 use std::{
-    io::Write,  // implements write for Vec
     borrow::Cow
 };
 use std::convert::Into;
@@ -38,7 +37,7 @@ pub struct Filter<'a> {
 }
 
 impl<'a> Filter<'a> {
-    pub fn new<W>(typ: Term<'a>, what: W) -> Filter
+    pub fn new<W>(typ: Term<'a>, what: W) -> Filter<'a>
     where W: 'a + Into<Cow<'a, str>> {
         Filter {
             typ,
@@ -47,7 +46,7 @@ impl<'a> Filter<'a> {
         }
     }
 
-    pub fn new_with_op<W>(typ: Term<'a>, what: W, how: Operation) -> Filter
+    pub fn new_with_op<W>(typ: Term<'a>, what: W, how: Operation) -> Filter<'a>
     where W: 'a + Into<Cow<'a, str>> {
         Filter {
             typ,
@@ -89,6 +88,22 @@ impl<'a> Query<'a> {
 
     pub fn and_with_op<'b: 'a, V: 'b + Into<Cow<'b, str>>>(&mut self, term: Term<'b>, op: Operation, value: V) -> &mut Query<'a> {
         self.filters.push(Filter::new_with_op(term, value, op));
+        self
+    }
+}
+
+#[derive(Default)]
+pub struct Group<'a> {
+    terms: Vec<Term<'a>>,
+}
+
+impl <'a> Group<'a> {
+    pub fn new() -> Group<'a> {
+        Group { terms: Vec::new() }
+    }
+
+    pub fn by<'b: 'a, V: 'b + Into<Cow<'b, str>>>(&mut self, term: Term<'b>) -> &mut Group<'a> {
+        self.terms.push(term);
         self
     }
 }
@@ -175,6 +190,19 @@ impl<'a> ToArguments for &'a Query<'a> {
         } else {
             Ok(())
         }
+    }
+}
+
+impl<'a> fmt::Display for Group<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.terms.iter().map(|t| format!("group {}", t)).collect::<Vec<String>>().join(" "))
+    }
+}
+
+impl<'a> ToArguments for Group<'a> {
+    fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
+    where F: FnMut(&str) -> StdResult<(), E> {
+        f(&self.to_string())
     }
 }
 
