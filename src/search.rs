@@ -92,22 +92,6 @@ impl<'a> Query<'a> {
     }
 }
 
-#[derive(Default)]
-pub struct Group<'a> {
-    terms: Vec<Term<'a>>,
-}
-
-impl <'a> Group<'a> {
-    pub fn new() -> Group<'a> {
-        Group { terms: Vec::new() }
-    }
-
-    pub fn by<'b: 'a, V: 'b + Into<Cow<'b, str>>>(&mut self, term: Term<'b>) -> &mut Group<'a> {
-        self.terms.push(term);
-        self
-    }
-}
-
 impl<'a> fmt::Display for Term<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(match *self {
@@ -190,19 +174,6 @@ impl<'a> ToArguments for &'a Query<'a> {
         } else {
             Ok(())
         }
-    }
-}
-
-impl<'a> fmt::Display for Group<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.terms.iter().map(|t| format!("group {}", t)).collect::<Vec<String>>().join(" "))
-    }
-}
-
-impl<'a> ToArguments for &'a Group<'a> {
-    fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
-    where F: FnMut(&str) -> StdResult<(), E> {
-        f(&self.to_string())
     }
 }
 

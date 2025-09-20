@@ -12,10 +12,11 @@ use crate::lsinfo::LsInfoEntry;
 use crate::message::{Channel, Message};
 use crate::mount::{Mount, Neighbor};
 use crate::output::Output;
+use crate::list::{GroupedValues};
 use crate::playlist::{Playlist, EditAction, SaveMode};
 use crate::plugin::Plugin;
 use crate::proto::*;
-use crate::search::{Group, Query, Term, Window};
+use crate::search::{Query, Term, Window};
 use crate::song::{Id, PosIdChange, Song};
 use crate::stats::Stats;
 use crate::status::{ReplayGain, Status};
@@ -535,15 +536,24 @@ impl<S: Read + Write> Client<S> {
         self.run_command(cmd, (query, window)).and_then(|_| self.read_structs("file"))
     }
 
-    /// Lists unique tags values of the specified type for songs matching the given query.
+    /// Lists unique tags values of the specified type for songs matching the given query. For now
+    /// at most one group condition is supported.
     // TODO: list type [filtertype] [filterwhat] [...] [group] [grouptype] [...]
     // It isn't clear if or how `group` works
-    pub fn list(&mut self, term: &Term, query: &Query, group: Option<&Group>) -> Result<Vec<String>> {
+    pub fn list(&mut self, term: &Term, query: &Query, group: Option<&str>) -> Result<GroupedValues> {
         if let Some(group) = group {
-            self.run_command("list", (term, query, group)).and_then(|_| self.read_pairs().map(|p| p.map(|p| p.1)).collect())
+            self.run_command("list", (term, query, "group", group)).and_then(|_| GroupedValues::from_pairs_with_sep(&mut self.read_pairs(), group.to_lowercase().as_str()))
         }
         else {
-            self.run_command("list", (term, query)).and_then(|_| self.read_pairs().map(|p| p.map(|p| p.1)).collect())
+            self.run_command("list", (term, query))
+                .and_then(|_| {
+                    let vals = self.read_pairs().map(|p| p.map(|p| p.1)).collect::<Result<Vec<String>>>()?;
+                    Ok(
+                        GroupedValues {
+                            groups: vec![("".to_string(), vals)]
+                        }
+                    )
+                })
         }
     }
 
