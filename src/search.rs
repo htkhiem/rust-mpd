@@ -199,7 +199,7 @@ impl<'a> fmt::Display for Group<'a> {
     }
 }
 
-impl<'a> ToArguments for Group<'a> {
+impl<'a> ToArguments for &'a Group<'a> {
     fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
     where F: FnMut(&str) -> StdResult<(), E> {
         f(&self.to_string())
