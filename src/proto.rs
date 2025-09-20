@@ -157,6 +157,10 @@ where I: Iterator<Item = io::Result<String>>
         }
         MultiSepMaps { pairs: self, seps, last_sep: None, value: None, done: false, first: true }
     }
+
+    pub(crate) fn next<I>(&self) -> Option<StdResult<(_, String), Error>> {
+        todo!()
+    }
 }
 
 // Client inner communication methods {{{
