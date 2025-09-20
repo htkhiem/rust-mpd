@@ -15,7 +15,7 @@ use crate::output::Output;
 use crate::playlist::{Playlist, EditAction, SaveMode};
 use crate::plugin::Plugin;
 use crate::proto::*;
-use crate::search::{Query, Term, Window};
+use crate::search::{Group, Query, Term, Window};
 use crate::song::{Id, PosIdChange, Song};
 use crate::stats::Stats;
 use crate::status::{ReplayGain, Status};
@@ -538,8 +538,13 @@ impl<S: Read + Write> Client<S> {
     /// Lists unique tags values of the specified type for songs matching the given query.
     // TODO: list type [filtertype] [filterwhat] [...] [group] [grouptype] [...]
     // It isn't clear if or how `group` works
-    pub fn list(&mut self, term: &Term, query: &Query) -> Result<Vec<String>> {
-        self.run_command("list", (term, query)).and_then(|_| self.read_pairs().map(|p| p.map(|p| p.1)).collect())
+    pub fn list(&mut self, term: &Term, query: &Query, group: Option<&Group>) -> Result<Vec<String>> {
+        if let Some(group) = group {
+            self.run_command("list", (term, query, group)).and_then(|_| self.read_pairs().map(|p| p.map(|p| p.1)).collect())
+        }
+        else {
+            self.run_command("list", (term, query)).and_then(|_| self.read_pairs().map(|p| p.map(|p| p.1)).collect())
+        }
     }
 
     /// Find all songs in the db that match query and adds them to current playlist.
