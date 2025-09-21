@@ -195,21 +195,19 @@ impl<S: Read + Write> Client<S> {
     // }}}
 
     // Queue control {{{
-    /// List given song or range of songs in a play queue
+    /// Get info of given song in a play queue
     pub fn songs<T: ToQueueRangeOrPlace>(&mut self, pos: T) -> Result<Vec<Song>> {
         let command = if T::is_id() { "playlistid" } else { "playlistinfo" };
         self.run_command(command, pos.to_range()).and_then(|_| self.read_structs("file"))
     }
 
-    /// List all songs in a play queue
-    pub fn queue<W>(&mut self, window: Option<W>) -> Result<Vec<Song>>
-    where W: Into<Window> {
+    /// List all songs or range of songs in a play queue
+    pub fn queue<W: Into<Window>>(&mut self, window: Option<W>) -> Result<Vec<Song>> {
         if let Some(window) = window {
             self.run_command("playlistinfo", window.into()).and_then(|_| self.read_structs("file"))
         } else {
             self.run_command("playlistinfo", ()).and_then(|_| self.read_structs("file"))
         }
-
     }
 
     /// Lists all songs in the database
@@ -242,8 +240,12 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all changes in a queue since given version
-    pub fn changes(&mut self, version: u32) -> Result<Vec<Song>> {
-        self.run_command("plchanges", version).and_then(|_| self.read_structs("file"))
+    pub fn changes<W: Into<Window>>(&mut self, version: u32, window: Option<W>) -> Result<Vec<Song>> {
+        if let Some(window) = window {
+            self.run_command("plchanges", (version, window.into())).and_then(|_| self.read_structs("file"))
+        } else {
+            self.run_command("plchanges", version).and_then(|_| self.read_structs("file"))
+        }
     }
 
     /// List all changes in a queue since given version.
