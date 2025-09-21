@@ -252,8 +252,12 @@ impl<S: Read + Write> Client<S> {
     /// This function only returns the position and the id of the changed song, not the complete metadata.
     /// This is more bandwidth efficient. To detect songs that were deleted at the end of the playlist,
     /// use playlistlength returned by status command.
-    pub fn changesposid(&mut self, version: u32) -> Result<Vec<PosIdChange>> {
-        self.run_command("plchangesposid", version).and_then(|_| self.read_structs("cpos"))
+    pub fn changesposid<W: Into<Window>>(&mut self, version: u32, window: Option<W>) -> Result<Vec<PosIdChange>> {
+        if let Some(window) = window {
+            self.run_command("plchangesposid", (version, window.into())).and_then(|_| self.read_structs("cpos"))
+        } else {
+            self.run_command("plchangesposid", version).and_then(|_| self.read_structs("cpos"))
+        }
     }
 
     /// Append a song into the queue
