@@ -201,8 +201,14 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all songs in a play queue
-    pub fn queue(&mut self) -> Result<Vec<Song>> {
-        self.run_command("playlistinfo", ()).and_then(|_| self.read_structs("file"))
+    pub fn queue<W>(&mut self, window: Option<W>) -> Result<Vec<Song>>
+    where W: Into<Window> {
+        if let Some(window) = window {
+            self.run_command("playlistinfo", window.into()).and_then(|_| self.read_structs("file"))
+        } else {
+            self.run_command("playlistinfo", ()).and_then(|_| self.read_structs("file"))
+        }
+
     }
 
     /// Lists all songs in the database
