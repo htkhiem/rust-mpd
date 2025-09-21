@@ -2,12 +2,14 @@
 
 use crate::{error::Result, proto::Pairs};
 
+#[derive(Debug)]
 struct Group {
     pub key: String,
     pub contents: Vec<String>
 }
 
 /// Values as returned by the `list` command, optionally grouped.
+#[derive(Debug)]
 pub struct GroupedValues {
     /// Vector of groups. Each group is a (key, contents) pair where
     /// key is the value of the grouping condition for that group and
