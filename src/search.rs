@@ -160,6 +160,9 @@ impl<'a> ToArguments for &'a Query<'a> {
         // Construct the query string in its entirety first before escaping
         if !self.filters.is_empty() {
             let mut qs = String::new();
+            if self.filters.len() > 1 {
+                qs.push_str("(");
+            }
             for (i, filter) in self.filters.iter().enumerate() {
                 if i > 0 {
                     qs.push_str(" AND ");
@@ -169,6 +172,9 @@ impl<'a> ToArguments for &'a Query<'a> {
                     qs.push_str(arg);
                     Ok(())
                 })?;
+            }
+            if self.filters.len() > 1 {
+                qs.push_str(")");
             }
             f(&qs)
         } else {
