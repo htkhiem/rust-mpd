@@ -202,12 +202,10 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all songs or range of songs in a play queue
-    pub fn queue<W: Into<Window>>(&mut self, window: Option<W>) -> Result<Vec<Song>> {
-        if let Some(window) = window {
-            self.run_command("playlistinfo", window.into()).and_then(|_| self.read_structs("file"))
-        } else {
-            self.run_command("playlistinfo", ()).and_then(|_| self.read_structs("file"))
-        }
+    pub fn queue<W: Into<Window>>(&mut self, window: W) -> Result<Vec<Song>> {
+        let mut prefixless_window: Window = window.into();
+        prefixless_window.include_prefix = false;
+        self.run_command("playlistinfo", prefixless_window).and_then(|_| self.read_structs("file"))
     }
 
     /// Lists all songs in the database
@@ -240,24 +238,20 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all changes in a queue since given version
-    pub fn changes<W: Into<Window>>(&mut self, version: u32, window: Option<W>) -> Result<Vec<Song>> {
-        if let Some(window) = window {
-            self.run_command("plchanges", (version, window.into())).and_then(|_| self.read_structs("file"))
-        } else {
-            self.run_command("plchanges", version).and_then(|_| self.read_structs("file"))
-        }
+    pub fn changes<W: Into<Window>>(&mut self, version: u32, window: W) -> Result<Vec<Song>> {
+        let mut prefixless_window: Window = window.into();
+        prefixless_window.include_prefix = false;
+        self.run_command("plchanges", (version, prefixless_window)).and_then(|_| self.read_structs("file"))
     }
 
     /// List all changes in a queue since given version.
     /// This function only returns the position and the id of the changed song, not the complete metadata.
     /// This is more bandwidth efficient. To detect songs that were deleted at the end of the playlist,
     /// use playlistlength returned by status command.
-    pub fn changesposid<W: Into<Window>>(&mut self, version: u32, window: Option<W>) -> Result<Vec<PosIdChange>> {
-        if let Some(window) = window {
-            self.run_command("plchangesposid", (version, window.into())).and_then(|_| self.read_structs("cpos"))
-        } else {
-            self.run_command("plchangesposid", version).and_then(|_| self.read_structs("cpos"))
-        }
+    pub fn changesposid<W: Into<Window>>(&mut self, version: u32, window: W) -> Result<Vec<PosIdChange>> {
+        let mut prefixless_window: Window = window.into();
+        prefixless_window.include_prefix = false;
+        self.run_command("plchangesposid", (version, prefixless_window)).and_then(|_| self.read_structs("cpos"))
     }
 
     /// Append a song into the queue
