@@ -57,17 +57,26 @@ impl<'a> Filter<'a> {
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Window(Option<(u32, u32)>);
+pub struct Window {
+    bounds: Option<(u32, u32)>,
+    pub include_prefix: bool
+}
 
 impl From<(u32, u32)> for Window {
     fn from(window: (u32, u32)) -> Window {
-        Window(Some(window))
+        Window {
+            bounds: Some(window),
+            include_prefix: true
+        }
     }
 }
 
 impl From<Option<(u32, u32)>> for Window {
     fn from(window: Option<(u32, u32)>) -> Window {
-        Window(window)
+        Window {
+            bounds: window,
+            include_prefix: true
+        }
     }
 }
 
@@ -186,8 +195,10 @@ impl<'a> ToArguments for &'a Query<'a> {
 impl ToArguments for Window {
     fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
     where F: FnMut(&str) -> StdResult<(), E> {
-        if let Some(window) = self.0 {
-            f("window")?;
+        if let Some(window) = self.bounds {
+            if self.include_prefix {
+                f("window")?;
+            }
             f(&format! {"{}:{}", window.0, window.1})?;
         }
         Ok(())
