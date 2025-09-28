@@ -788,10 +788,18 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all files of a given type under given directory (identified by uri)
-    /// with a tag set to given value
+    /// with a sticker set to given value
     pub fn find_sticker_eq(&mut self, typ: &str, uri: &str, name: &str, value: &str) -> Result<Vec<String>> {
         self.run_command("sticker find", (typ, uri, name, "=", value)).and_then(|_| self.read_list("file"))
     }
+
+    /// List all files of a given type under given directory (identified by uri)
+    /// with a sticker matching a certain condition. This is more general than
+    /// find_sticker_eq in that it allows for operators other than "=".
+    pub fn find_sticker_op(&mut self, typ: &str, uri: &str, name: &str, op: &str, value: &str) -> Result<Vec<String>> {
+        self.run_command("sticker find", (typ, uri, name, op, value)).and_then(|_| self.read_list("file"))
+    }
+
     // }}}
 }
 
