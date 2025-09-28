@@ -639,6 +639,26 @@ impl<S: Read + Write> Client<S> {
         self.run_command("tagtypes", ()).and_then(|_| self.read_list("tagtype"))
     }
 
+    /// Enable these tag types in future responses
+    pub fn tagtypes_enable(&mut self) -> Result<()> {
+        self.run_command("tagtypes enable", ()).and_then(|_| self.expect_ok())
+    }
+
+    /// Enable all tag types in future responses
+    pub fn tagtypes_all(&mut self) -> Result<()> {
+        self.run_command("tagtypes all", ()).and_then(|_| self.expect_ok())
+    }
+
+    /// Disable these tag types in future responses
+    pub fn tagtypes_disable(&mut self, tagtypes: Vec<&str>) -> Result<()> {
+        self.run_command("tagtypes disable", tagtypes).and_then(|_| self.expect_ok())
+    }
+
+    /// Disable all tag types in future responses
+    pub fn tagtypes_clear(&mut self) -> Result<()> {
+        self.run_command("tagtypes clear", ()).and_then(|_| self.expect_ok())
+    }
+
     /// List all available decoder plugins
     pub fn decoders(&mut self) -> Result<Vec<Plugin>> {
         self.run_command("decoders", ()).and_then(|_| self.read_struct())
@@ -748,8 +768,8 @@ impl<S: Read + Write> Client<S> {
 
     /// List all (file, sticker) pairs for sticker name and objects of given type
     /// from given directory (identified by uri)
-    pub fn find_sticker(&mut self, typ: &str, uri: &str, name: &str) -> Result<Vec<(String, String)>> {
-        self.run_command("sticker find", (typ, uri, name)).and_then(|_| {
+    pub fn find_sticker<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, window: W) -> Result<Vec<(String, String)>> {
+        self.run_command("sticker find", (typ, uri, name, window.into())).and_then(|_| {
             self.read_pairs()
                 .split("file")
                 .map(|rmap| {
@@ -768,10 +788,18 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all files of a given type under given directory (identified by uri)
-    /// with a tag set to given value
-    pub fn find_sticker_eq(&mut self, typ: &str, uri: &str, name: &str, value: &str) -> Result<Vec<String>> {
-        self.run_command("sticker find", (typ, uri, name, "=", value)).and_then(|_| self.read_list("file"))
+    /// with a sticker set to given value
+    pub fn find_sticker_eq<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, value: &str, window: W) -> Result<Vec<String>> {
+        self.run_command("sticker find", (typ, uri, name, "=", value, window.into())).and_then(|_| self.read_list("file"))
     }
+
+    /// List all files of a given type under given directory (identified by uri)
+    /// with a sticker matching a certain condition. This is more general than
+    /// find_sticker_eq in that it allows for operators other than "=".
+    pub fn find_sticker_op<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, op: &str, value: &str, window: W) -> Result<Vec<String>> {
+        self.run_command("sticker find", (typ, uri, name, op, value, window.into())).and_then(|_| self.read_list("file"))
+    }
+
     // }}}
 }
 
