@@ -768,8 +768,8 @@ impl<S: Read + Write> Client<S> {
 
     /// List all (file, sticker) pairs for sticker name and objects of given type
     /// from given directory (identified by uri)
-    pub fn find_sticker(&mut self, typ: &str, uri: &str, name: &str) -> Result<Vec<(String, String)>> {
-        self.run_command("sticker find", (typ, uri, name)).and_then(|_| {
+    pub fn find_sticker<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, window: W) -> Result<Vec<(String, String)>> {
+        self.run_command("sticker find", (typ, uri, name, window.into())).and_then(|_| {
             self.read_pairs()
                 .split("file")
                 .map(|rmap| {
@@ -789,15 +789,15 @@ impl<S: Read + Write> Client<S> {
 
     /// List all files of a given type under given directory (identified by uri)
     /// with a sticker set to given value
-    pub fn find_sticker_eq(&mut self, typ: &str, uri: &str, name: &str, value: &str) -> Result<Vec<String>> {
-        self.run_command("sticker find", (typ, uri, name, "=", value)).and_then(|_| self.read_list("file"))
+    pub fn find_sticker_eq<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, value: &str, window: W) -> Result<Vec<String>> {
+        self.run_command("sticker find", (typ, uri, name, "=", value, window.into())).and_then(|_| self.read_list("file"))
     }
 
     /// List all files of a given type under given directory (identified by uri)
     /// with a sticker matching a certain condition. This is more general than
     /// find_sticker_eq in that it allows for operators other than "=".
-    pub fn find_sticker_op(&mut self, typ: &str, uri: &str, name: &str, op: &str, value: &str) -> Result<Vec<String>> {
-        self.run_command("sticker find", (typ, uri, name, op, value)).and_then(|_| self.read_list("file"))
+    pub fn find_sticker_op<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, op: &str, value: &str, window: W) -> Result<Vec<String>> {
+        self.run_command("sticker find", (typ, uri, name, op, value, window.into())).and_then(|_| self.read_list("file"))
     }
 
     // }}}
