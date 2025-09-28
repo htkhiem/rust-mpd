@@ -287,6 +287,16 @@ impl <'a> ToArguments for &Cow<'a, str> {
     }
 }
 
+impl <'a, T: ToArguments> ToArguments for Vec<T> {
+    fn to_arguments<F, E>(&self, f: &mut F) -> StdResult<(), E>
+    where F: FnMut(&str) -> StdResult<(), E> {
+        for arg in self.iter() {
+            arg.to_arguments(f)?
+        }
+        Ok(())
+    }
+}
+
 macro_rules! argument_for_display {
     ( $x:path ) => {
         impl ToArguments for $x {

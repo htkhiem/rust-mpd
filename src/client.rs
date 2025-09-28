@@ -639,6 +639,26 @@ impl<S: Read + Write> Client<S> {
         self.run_command("tagtypes", ()).and_then(|_| self.read_list("tagtype"))
     }
 
+    /// Enable these tag types in future responses
+    pub fn tagtypes_enable(&mut self) -> Result<()> {
+        self.run_command("tagtypes enable", ()).and_then(|_| self.expect_ok())
+    }
+
+    /// Enable all tag types in future responses
+    pub fn tagtypes_all(&mut self) -> Result<()> {
+        self.run_command("tagtypes all", ()).and_then(|_| self.expect_ok())
+    }
+
+    /// Disable these tag types in future responses
+    pub fn tagtypes_disable(&mut self, tagtypes: Vec<&str>) -> Result<()> {
+        self.run_command("tagtypes disable", tagtypes).and_then(|_| self.expect_ok())
+    }
+
+    /// Disable all tag types in future responses
+    pub fn tagtypes_clear(&mut self) -> Result<()> {
+        self.run_command("tagtypes clear", ()).and_then(|_| self.expect_ok())
+    }
+
     /// List all available decoder plugins
     pub fn decoders(&mut self) -> Result<Vec<Plugin>> {
         self.run_command("decoders", ()).and_then(|_| self.read_struct())
