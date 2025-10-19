@@ -34,10 +34,10 @@ where I: Iterator<Item = io::Result<String>>
 
 pub struct Maps<'a, I: 'a> {
     pairs: &'a mut Pairs<I>,
-    sep: &'a str,
+    sep: String,
     value: Option<String>,
     done: bool,
-    first: bool,
+    first: bool
 }
 
 impl<'a, I> Iterator for Maps<'a, I>
@@ -58,7 +58,7 @@ where I: Iterator<Item = io::Result<String>>
         loop {
             match self.pairs.next() {
                 Some(Ok((a, b))) => {
-                    if &*a == self.sep {
+                    if a.to_lowercase() == self.sep {
                         self.value = Some(b);
                         if self.first {
                             self.first = false;
@@ -89,7 +89,7 @@ where I: Iterator<Item = io::Result<String>>
 // Variant of Maps that can take multiple separators. Used for lsinfo.
 pub struct MultiSepMaps<'a, I: 'a> {
     pairs: &'a mut Pairs<I>,
-    seps: FxHashSet<&'static str>,
+    seps: FxHashSet<String>,
     last_sep: Option<String>,
     value: Option<String>,
     done: bool,
@@ -114,7 +114,7 @@ where I: Iterator<Item = io::Result<String>>
         loop {
             match self.pairs.next() {
                 Some(Ok((a, b))) => {
-                    if self.seps.contains(&a as &str) {
+                    if self.seps.contains(a.to_lowercase().as_str()) {
                         self.value = Some(b);
                         self.last_sep = Some(a);
                         if self.first {
@@ -147,13 +147,13 @@ impl<I> Pairs<I>
 where I: Iterator<Item = io::Result<String>>
 {
     pub fn split<'a, 'b: 'a>(&'a mut self, f: &'b str) -> Maps<'a, I> {
-        Maps { pairs: self, sep: f, value: None, done: false, first: true }
+        Maps { pairs: self, sep: f.to_lowercase(), value: None, done: false, first: true }
     }
 
     pub fn split_multisep<'a, 'b: 'a>(&'a mut self, f: &[&'static str]) -> MultiSepMaps<'a, I> {
-        let mut seps: FxHashSet<&'static str> = FxHashSet::default();
+        let mut seps: FxHashSet<String> = FxHashSet::default();
         for elem in f {
-            seps.insert(elem);
+            seps.insert(elem.to_lowercase());
         }
         MultiSepMaps { pairs: self, seps, last_sep: None, value: None, done: false, first: true }
     }
@@ -183,8 +183,8 @@ pub trait Proto {
         self.read_pairs().split_multisep(keys).map(|v| v.and_then(|v| FromIter::from_iter(v.into_iter().map(Ok)))).collect()
     }
 
-    fn read_list(&mut self, key: &'static str) -> Result<Vec<String>> {
-        self.read_pairs().filter(|r| r.as_ref().map(|(a, _)| *a == key).unwrap_or(true)).map(|r| r.map(|(_, b)| b)).collect()
+    fn read_list(&mut self, key: &str) -> Result<Vec<String>> {
+        self.read_pairs().filter(|r| r.as_ref().map(|(a, _)| &a.to_lowercase() == key).unwrap_or(true)).map(|r| r.map(|(_, b)| b)).collect()
     }
 
     fn read_struct<'a, T>(&'a mut self) -> Result<T>

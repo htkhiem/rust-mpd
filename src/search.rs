@@ -18,6 +18,8 @@ pub enum Term<'a> {
     Base,
     #[cfg_attr(feature = "serde", serde(rename = "modified-since"))]
     LastMod,
+    #[cfg_attr(feature = "serde", serde(rename = "added-since"))]
+    AddedSince,
     Tag(Cow<'a, str>),
 }
 
@@ -113,6 +115,7 @@ impl<'a> fmt::Display for Term<'a> {
             Term::File => "file",
             Term::Base => "base",
             Term::LastMod => "modified-since",
+            Term::AddedSince => "added-since",
             Term::Tag(ref tag) => tag,
         })
     }
@@ -148,7 +151,7 @@ impl<'a> ToArguments for &'a Filter<'a> {
     where F: FnMut(&str) -> StdResult<(), E> {
         match self.typ {
             // For some terms, the filter clause cannot have an operation
-            Term::Base | Term::LastMod => {
+            Term::Base | Term::LastMod | Term::AddedSince => {
                 f(&format!(
                     "({} {})",
                     &self.typ,
