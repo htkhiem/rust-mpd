@@ -640,8 +640,8 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// Enable these tag types in future responses
-    pub fn tagtypes_enable(&mut self) -> Result<()> {
-        self.run_command("tagtypes enable", ()).and_then(|_| self.expect_ok())
+    pub fn tagtypes_enable(&mut self, tagtypes: Vec<&str>) -> Result<()> {
+        self.run_command("tagtypes enable", tagtypes).and_then(|_| self.expect_ok())
     }
 
     /// Enable all tag types in future responses
@@ -747,10 +747,10 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all stickers from a given object, identified by type and uri
-    pub fn stickers(&mut self, typ: &str, uri: &str) -> Result<Vec<String>> {
+    pub fn stickers(&mut self, typ: &str, uri: &str) -> Result<Vec<(String, String)>> {
         self.run_command("sticker list", (typ, uri))
             .and_then(|_| self.read_list("sticker"))
-            .map(|v| v.into_iter().map(|b| b.split_once('=').map(|x| x.1.to_owned()).unwrap()).collect())
+            .map(|v| v.into_iter().map(|b| b.split_once('=').map(|x| (x.0.to_owned(), x.1.to_owned())).unwrap()).collect())
     }
 
     /// List all stickers from a given object in a map, identified by type and uri
@@ -798,6 +798,22 @@ impl<S: Read + Write> Client<S> {
     /// find_sticker_eq in that it allows for operators other than "=".
     pub fn find_sticker_op<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, op: &str, value: &str, window: W) -> Result<Vec<String>> {
         self.run_command("sticker find", (typ, uri, name, op, value, window.into())).and_then(|_| self.read_list("file"))
+    }
+
+    /// Adds a sticker value to the specified object. If a sticker item with
+    /// that name already exists, it is incremented by supplied value.
+    ///
+    /// `value` should be numeric, formatted as a string.
+    pub fn inc_sticker(&mut self, typ: &str, uri: &str, name: &str, value: &str) -> Result<()> {
+        self.run_command("sticker inc", (typ, uri, name, value)).and_then(|_| self.expect_ok())
+    }
+
+    /// Adds a sticker value to the specified object. If a sticker item with
+    /// that name already exists, it is decremented by supplied value.
+    ///
+    /// `value` should be numeric, formatted as a string.
+    pub fn dec_sticker(&mut self, typ: &str, uri: &str, name: &str, value: &str) -> Result<()> {
+        self.run_command("sticker dec", (typ, uri, name, value)).and_then(|_| self.expect_ok())
     }
 
     // }}}

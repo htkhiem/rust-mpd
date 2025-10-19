@@ -10,6 +10,7 @@ use std::convert::Into;
 use std::fmt;
 use std::result::Result as StdResult;
 
+#[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(untagged, rename_all = "lowercase"))]
 pub enum Term<'a> {
     Any,
@@ -20,6 +21,7 @@ pub enum Term<'a> {
     Tag(Cow<'a, str>),
 }
 
+#[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(untagged, rename_all = "lowercase"))]
 pub enum Operation {
     Equals,
@@ -29,6 +31,7 @@ pub enum Operation {
     StartsWith
 }
 
+#[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Filter<'a> {
     typ: Term<'a>,
@@ -56,6 +59,7 @@ impl<'a> Filter<'a> {
     }
 }
 
+#[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Window {
     bounds: Option<(u32, u32)>,
@@ -80,7 +84,7 @@ impl From<Option<(u32, u32)>> for Window {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Query<'a> {
     filters: Vec<Filter<'a>>,
