@@ -23,7 +23,7 @@ pub enum Term<'a> {
     Tag(Cow<'a, str>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(untagged, rename_all = "lowercase"))]
 pub enum Operation {
     Equals,
