@@ -639,6 +639,26 @@ impl<S: Read + Write> Client<S> {
         self.run_command("tagtypes", ()).and_then(|_| self.read_list("tagtype"))
     }
 
+    /// Enable these tag types in future responses
+    pub fn tagtypes_enable(&mut self, tagtypes: Vec<&str>) -> Result<()> {
+        self.run_command("tagtypes enable", tagtypes).and_then(|_| self.expect_ok())
+    }
+
+    /// Enable all tag types in future responses
+    pub fn tagtypes_all(&mut self) -> Result<()> {
+        self.run_command("tagtypes all", ()).and_then(|_| self.expect_ok())
+    }
+
+    /// Disable these tag types in future responses
+    pub fn tagtypes_disable(&mut self, tagtypes: Vec<&str>) -> Result<()> {
+        self.run_command("tagtypes disable", tagtypes).and_then(|_| self.expect_ok())
+    }
+
+    /// Disable all tag types in future responses
+    pub fn tagtypes_clear(&mut self) -> Result<()> {
+        self.run_command("tagtypes clear", ()).and_then(|_| self.expect_ok())
+    }
+
     /// List all available decoder plugins
     pub fn decoders(&mut self) -> Result<Vec<Plugin>> {
         self.run_command("decoders", ()).and_then(|_| self.read_struct())
@@ -727,10 +747,10 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all stickers from a given object, identified by type and uri
-    pub fn stickers(&mut self, typ: &str, uri: &str) -> Result<Vec<String>> {
+    pub fn stickers(&mut self, typ: &str, uri: &str) -> Result<Vec<(String, String)>> {
         self.run_command("sticker list", (typ, uri))
             .and_then(|_| self.read_list("sticker"))
-            .map(|v| v.into_iter().map(|b| b.split_once('=').map(|x| x.1.to_owned()).unwrap()).collect())
+            .map(|v| v.into_iter().map(|b| b.split_once('=').map(|x| (x.0.to_owned(), x.1.to_owned())).unwrap()).collect())
     }
 
     /// List all stickers from a given object in a map, identified by type and uri
@@ -748,14 +768,20 @@ impl<S: Read + Write> Client<S> {
 
     /// List all (file, sticker) pairs for sticker name and objects of given type
     /// from given directory (identified by uri)
-    pub fn find_sticker(&mut self, typ: &str, uri: &str, name: &str) -> Result<Vec<(String, String)>> {
-        self.run_command("sticker find", (typ, uri, name)).and_then(|_| {
+    pub fn find_sticker<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, window: W) -> Result<Vec<(String, String)>> {
+        let lower_typ = typ.to_lowercase();
+        let delim = if &lower_typ == "song" {
+            &String::from("file")
+        } else {
+            &lower_typ
+        };
+        self.run_command("sticker find", (&lower_typ, uri, name, window.into())).and_then(|_| {
             self.read_pairs()
-                .split("file")
+                .split(delim)
                 .map(|rmap| {
                     rmap.map(|map| {
                         (
-                            map.iter().find_map(|(k, v)| if k == "file" { Some(v.to_owned()) } else { None }).unwrap(),
+                            map.iter().find_map(|(k, v)| if &k.to_lowercase() == delim { Some(v.to_owned()) } else { None }).unwrap(),
                             map.iter()
                                 .find_map(|(k, v)| if k == "sticker" { Some(v.to_owned()) } else { None })
                                 .and_then(|s| s.split_once('=').map(|x| x.1.to_owned()))
@@ -768,10 +794,46 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// List all files of a given type under given directory (identified by uri)
-    /// with a tag set to given value
-    pub fn find_sticker_eq(&mut self, typ: &str, uri: &str, name: &str, value: &str) -> Result<Vec<String>> {
-        self.run_command("sticker find", (typ, uri, name, "=", value)).and_then(|_| self.read_list("file"))
+    /// with a sticker set to given value
+    pub fn find_sticker_eq<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, value: &str, window: W) -> Result<Vec<String>> {
+        let lower_typ = typ.to_lowercase();
+        let delim = if &lower_typ == "song" {
+            String::from("file")
+        } else {
+            lower_typ
+        };
+        self.run_command("sticker find", (typ, uri, name, "=", value, window.into())).and_then(|_| self.read_list(&delim))
     }
+
+    /// List all files of a given type under given directory (identified by uri)
+    /// with a sticker matching a certain condition. This is more general than
+    /// find_sticker_eq in that it allows for operators other than "=".
+    pub fn find_sticker_op<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, op: &str, value: &str, window: W) -> Result<Vec<String>> {
+        let lower_typ = typ.to_lowercase();
+        let delim = if &lower_typ == "song" {
+            String::from("file")
+        } else {
+            lower_typ
+        };
+        self.run_command("sticker find", (typ, uri, name, op, value, window.into())).and_then(|_| self.read_list(&delim))
+    }
+
+    /// Adds a sticker value to the specified object. If a sticker item with
+    /// that name already exists, it is incremented by supplied value.
+    ///
+    /// `value` should be numeric, formatted as a string.
+    pub fn inc_sticker(&mut self, typ: &str, uri: &str, name: &str, value: &str) -> Result<()> {
+        self.run_command("sticker inc", (typ, uri, name, value)).and_then(|_| self.expect_ok())
+    }
+
+    /// Adds a sticker value to the specified object. If a sticker item with
+    /// that name already exists, it is decremented by supplied value.
+    ///
+    /// `value` should be numeric, formatted as a string.
+    pub fn dec_sticker(&mut self, typ: &str, uri: &str, name: &str, value: &str) -> Result<()> {
+        self.run_command("sticker dec", (typ, uri, name, value)).and_then(|_| self.expect_ok())
+    }
+
     // }}}
 }
 

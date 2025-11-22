@@ -10,6 +10,7 @@ use std::convert::Into;
 use std::fmt;
 use std::result::Result as StdResult;
 
+#[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(untagged, rename_all = "lowercase"))]
 pub enum Term<'a> {
     Any,
@@ -17,9 +18,12 @@ pub enum Term<'a> {
     Base,
     #[cfg_attr(feature = "serde", serde(rename = "modified-since"))]
     LastMod,
+    #[cfg_attr(feature = "serde", serde(rename = "added-since"))]
+    AddedSince,
     Tag(Cow<'a, str>),
 }
 
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(untagged, rename_all = "lowercase"))]
 pub enum Operation {
     Equals,
@@ -29,6 +33,7 @@ pub enum Operation {
     StartsWith
 }
 
+#[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Filter<'a> {
     typ: Term<'a>,
@@ -56,6 +61,7 @@ impl<'a> Filter<'a> {
     }
 }
 
+#[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Window {
     bounds: Option<(u32, u32)>,
@@ -80,7 +86,7 @@ impl From<Option<(u32, u32)>> for Window {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Query<'a> {
     filters: Vec<Filter<'a>>,
@@ -109,6 +115,7 @@ impl<'a> fmt::Display for Term<'a> {
             Term::File => "file",
             Term::Base => "base",
             Term::LastMod => "modified-since",
+            Term::AddedSince => "added-since",
             Term::Tag(ref tag) => tag,
         })
     }
@@ -144,7 +151,7 @@ impl<'a> ToArguments for &'a Filter<'a> {
     where F: FnMut(&str) -> StdResult<(), E> {
         match self.typ {
             // For some terms, the filter clause cannot have an operation
-            Term::Base | Term::LastMod => {
+            Term::Base | Term::LastMod | Term::AddedSince => {
                 f(&format!(
                     "({} {})",
                     &self.typ,
