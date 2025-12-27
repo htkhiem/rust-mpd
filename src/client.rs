@@ -640,7 +640,7 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// Enable these tag types in future responses
-    pub fn tagtypes_enable(&mut self, tagtypes: Vec<&str>) -> Result<()> {
+    pub fn tagtypes_enable(&mut self, tagtypes: &[&str]) -> Result<()> {
         self.run_command("tagtypes enable", tagtypes).and_then(|_| self.expect_ok())
     }
 
@@ -650,7 +650,7 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// Disable these tag types in future responses
-    pub fn tagtypes_disable(&mut self, tagtypes: Vec<&str>) -> Result<()> {
+    pub fn tagtypes_disable(&mut self, tagtypes: &[&str]) -> Result<()> {
         self.run_command("tagtypes disable", tagtypes).and_then(|_| self.expect_ok())
     }
 

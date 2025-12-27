@@ -10,6 +10,6 @@ fn playlists() {
     println!("{:?}", pls);
 
     for pl in &pls {
-        println!("{}: {:?}", pl.name, mpd.playlist(&pl.name).unwrap());
+        println!("{}: {:?}", pl.name, mpd.playlist(&pl.name, Some(..)).unwrap());
     }
 }

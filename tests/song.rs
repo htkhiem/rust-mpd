@@ -4,7 +4,7 @@ mod helpers;
 use std::time::Duration;
 
 use helpers::connect;
-use mpd::Song;
+use mpd::{Song, lsinfo::LsInfoEntry};
 
 #[test]
 fn currentsong() {
@@ -16,7 +16,7 @@ fn currentsong() {
 #[test]
 fn queue() {
     let mut mpd = connect();
-    let queue = mpd.queue().unwrap();
+    let queue = mpd.queue(None).unwrap();
     println!("{:?}", queue);
 
     let songs = mpd.songs(..).unwrap();
@@ -29,9 +29,10 @@ fn lsinfo() {
     let songs = mpd.lsinfo(Song { file: "silence.flac".into(), ..Default::default() }).unwrap();
     assert_eq!(songs.len(), 1);
 
-    let song = songs.get(0).unwrap();
-    assert_eq!(song.file, "silence.flac");
-    assert_eq!(song.duration.expect("song should have duration"), Duration::from_millis(500));
+    if let LsInfoEntry::Song(song) = songs.get(0).unwrap() {
+        assert_eq!(song.file, "silence.flac");
+        assert_eq!(song.duration.expect("song should have duration"), Duration::from_millis(500));
+    }
 }
 
 #[test]
