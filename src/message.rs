@@ -10,6 +10,7 @@
 
 use crate::convert::FromMap;
 use crate::error::{Error, ProtoError};
+use crate::proto::ToArguments;
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -89,5 +90,12 @@ impl Channel {
                 || (0x30..=0x39).contains(&b)
                 || (b == 0x5f || b == 0x2f || b == 0x2e || b == 0x3a)
         })
+    }
+}
+
+impl ToArguments for &Channel {
+    fn to_arguments<F, E>(&self, f: &mut F) -> Result<(), E>
+    where F: FnMut(&str) -> Result<(), E> {
+        f(&self.to_string())
     }
 }

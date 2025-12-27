@@ -679,17 +679,17 @@ impl<S: Read + Write> Client<S> {
     }
 
     /// Send a message to a channel
-    pub fn sendmessage(&mut self, channel: Channel, message: &str) -> Result<()> {
+    pub fn sendmessage(&mut self, channel: &Channel, message: &str) -> Result<()> {
         self.run_command("sendmessage", (channel, message)).and_then(|_| self.expect_ok())
     }
 
     /// Subscribe to a channel
-    pub fn subscribe(&mut self, channel: Channel) -> Result<()> {
+    pub fn subscribe(&mut self, channel: &Channel) -> Result<()> {
         self.run_command("subscribe", channel).and_then(|_| self.expect_ok())
     }
 
     /// Unsubscribe to a channel
-    pub fn unsubscribe(&mut self, channel: Channel) -> Result<()> {
+    pub fn unsubscribe(&mut self, channel: &Channel) -> Result<()> {
         self.run_command("unsubscribe", channel).and_then(|_| self.expect_ok())
     }
     // }}}
