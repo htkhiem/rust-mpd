@@ -61,7 +61,7 @@ impl<'a> Filter<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Window {
     bounds: Option<(u32, u32)>,
