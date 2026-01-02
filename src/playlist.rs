@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 
 /// Save mode when calling save().
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SaveMode {
     /// Return error if there is an existing playlist with the same name
     Create,
