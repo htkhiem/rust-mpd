@@ -11,7 +11,7 @@ use std::fmt;
 use std::result::Result as StdResult;
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(untagged, rename_all = "lowercase"))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(rename_all = "lowercase"))]
 pub enum Term<'a> {
     Any,
     File,
@@ -24,7 +24,7 @@ pub enum Term<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(untagged, rename_all = "lowercase"))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(rename_all = "lowercase"))]
 pub enum Operation {
     Equals,
     NotEquals,
