@@ -486,6 +486,33 @@ impl<S: Read + Write> Client<S> {
         self.find_generic("find", query, window.into())
     }
 
+    /// Convenience function to find by multiple queries at once. The queries are effectively ORed together
+    /// without becoming one giant query that may clog the DB.
+    /// Optionally limit by tagtypes for efficiency. The initial list of accepted tagtypes will be restored
+    /// will be restored after this call concludes.
+    pub fn find_multiple(&mut self, queries_windows: &[(Query, Window)], tagtypes: Option<&[&str]>) -> Result<Vec<Song>> {
+        // Get current tagtypes
+        let old_tagtypes: Option<Vec<String>>;
+        if let Some(tagtypes) = tagtypes {
+            old_tagtypes = Some(self.tagtypes()?);
+            self.tagtypes_clear().and_then(|_| self.tagtypes_enable(tagtypes))?;
+        } else {
+            old_tagtypes = None;
+        }
+
+        self.run_command("command_list_begin", ())?;
+        for (query, window) in queries_windows.into_iter() {
+            self.run_command("find", (query, *window))?;
+        }
+        let res = self.run_command("command_list_end", ())
+            .and_then(|_| self.read_structs("file"));
+
+        if let Some(old_tagtypes) = old_tagtypes {
+            self.tagtypes_clear().and_then(|_| self.tagtypes_enable(&old_tagtypes.iter().map(String::as_ref).collect::<Vec<&str>>()))?;
+        }
+        res
+    }
+
     /// Find album art for file
     pub fn albumart<P: ToSongPath>(&mut self, path: &P) -> Result<Vec<u8>> {
         let mut buf = vec![];
