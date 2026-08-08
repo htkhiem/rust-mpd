@@ -763,6 +763,15 @@ impl<S: Read + Write> Client<S> {
         self.run_command("sticker set", (typ, uri, name, value)).and_then(|_| self.expect_ok())
     }
 
+    /// Command-list version of set_sticker, meant for atomically setting multiple stickers at once.
+    pub fn set_stickers(&mut self, typ: &str, uri: &str, names_values: &[(&str, &str)]) -> Result<()> {
+        let commands: Vec<(&str, (&str, &str, &str, &str))> = names_values
+            .iter()
+            .map(|&(name, value)| ("sticker set", (typ, uri, name, value)))
+            .collect();
+        self.run_command_list(&commands).and_then(|_| self.expect_ok())
+    }
+
     /// Delete sticker from a given object, identified by type and uri
     pub fn delete_sticker(&mut self, typ: &str, uri: &str, name: &str) -> Result<()> {
         self.run_command("sticker delete", (typ, uri, name)).and_then(|_| self.expect_ok())
