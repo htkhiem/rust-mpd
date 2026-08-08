@@ -802,6 +802,18 @@ impl<S: Read + Write> Client<S> {
         })
     }
 
+    /// Command-list version of sticker(), meant for atomically getting multiple stickers at once.
+    pub fn get_stickers(&mut self, typ: &str, uri: &str, names: &[&str]) -> Result<Vec<(String, String)>> {
+        self.run_command_list(
+            &names
+                .iter()
+                .map(|&name| ("sticker get", (typ, uri, name)))
+                .collect::<Vec<(&str, (&str, &str, &str))>>()
+        ).and_then(|_| self.read_fields::<Sticker>("sticker")).map(
+            |stickers| {stickers.into_iter().map(|s| (s.name, s.value)).collect()}
+        )
+    }
+
     /// List all (file, sticker) pairs for sticker name and objects of given type
     /// from given directory (identified by uri)
     pub fn find_sticker<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, window: W) -> Result<Vec<(String, String)>> {
