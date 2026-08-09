@@ -55,6 +55,7 @@ mod sticker;
 mod proto;
 pub mod client;
 
+pub use proto::ToArguments;
 pub use client::Client;
 pub use idle::{Idle, Subsystem};
 pub use message::{Channel, Message};

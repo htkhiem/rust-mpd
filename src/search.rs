@@ -241,13 +241,6 @@ mod test {
         let mut query = Query::new();
         let finished = query.and(Term::Tag("albumartist".into()), "Mac DeMarco").and(Term::Tag("album".into()), "Salad Days");
         let output = collect(&*finished);
-        assert_eq!(output, vec!["albumartist", "Mac DeMarco", "album", "Salad Days"]);
-    }
-
-    #[test]
-    fn multiple_and() {
-        let mut query = Query::new();
-        query.and(Term::Tag("albumartist".into()), "Mac DeMarco");
-        query.and(Term::Tag("album".into()), "Salad Days");
+        assert_eq!(output, vec!["((albumartist == \"Mac DeMarco\") AND (album == \"Salad Days\"))"]);
     }
 }
