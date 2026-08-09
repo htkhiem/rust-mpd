@@ -763,6 +763,24 @@ impl<S: Read + Write> Client<S> {
         self.run_command("sticker set", (typ, uri, name, value)).and_then(|_| self.expect_ok())
     }
 
+    /// Command-list version of set_sticker, meant for atomically setting multiple stickers at once.
+    pub fn set_stickers(&mut self, typ: &str, uri: &str, names_values: &[(&str, &str)]) -> Result<()> {
+        let commands: Vec<(&str, (&str, &str, &str, &str))> = names_values
+            .iter()
+            .map(|&(name, value)| ("sticker set", (typ, uri, name, value)))
+            .collect();
+        self.run_command_list(&commands).and_then(|_| self.expect_ok())
+    }
+
+    /// Command-list version of delete_sticker, meant for atomically deleting multiple stickers at once.
+    pub fn delete_stickers(&mut self, typ: &str, uri: &str, names: &[&str]) -> Result<()> {
+        let commands: Vec<(&str, (&str, &str, &str))> = names
+            .iter()
+            .map(|&name| ("sticker delete", (typ, uri, name)))
+            .collect();
+        self.run_command_list(&commands).and_then(|_| self.expect_ok())
+    }
+
     /// Delete sticker from a given object, identified by type and uri
     pub fn delete_sticker(&mut self, typ: &str, uri: &str, name: &str) -> Result<()> {
         self.run_command("sticker delete", (typ, uri, name)).and_then(|_| self.expect_ok())
@@ -791,6 +809,18 @@ impl<S: Read + Write> Client<S> {
                 })
                 .collect()
         })
+    }
+
+    /// Command-list version of sticker(), meant for atomically getting multiple stickers at once.
+    pub fn get_stickers(&mut self, typ: &str, uri: &str, names: &[&str]) -> Result<Vec<(String, String)>> {
+        self.run_command_list(
+            &names
+                .iter()
+                .map(|&name| ("sticker get", (typ, uri, name)))
+                .collect::<Vec<(&str, (&str, &str, &str))>>()
+        ).and_then(|_| self.read_fields::<Sticker>("sticker")).map(
+            |stickers| {stickers.into_iter().map(|s| (s.name, s.value)).collect()}
+        )
     }
 
     /// List all (file, sticker) pairs for sticker name and objects of given type
