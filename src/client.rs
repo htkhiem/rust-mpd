@@ -813,10 +813,15 @@ impl<S: Read + Write> Client<S> {
 
     /// Command-list version of sticker(), meant for atomically getting multiple stickers at once.
     pub fn get_stickers(&mut self, typ: &str, uri: &str, names: &[&str]) -> Result<Vec<(String, String)>> {
+        // Check which stickers of the requested are available first, as we can't request nonexistent stickers using a command list
+        // (would fail otherwise).
+        // This SHOULD be fast as it only returns sticker names. Euphonica stores values in the kilobytes range for example.
+        let available = self.run_command("sticker list", (typ, uri))
+            .and_then(|_| self.read_list("sticker"))?.into_iter().filter(|name| names.contains(&name.as_str())).collect::<Vec<String>>();
         self.run_command_list(
-            &names
+            &available
                 .iter()
-                .map(|&name| ("sticker get", (typ, uri, name)))
+                .map(|name| ("sticker get", (typ, uri, name.as_str())))
                 .collect::<Vec<(&str, (&str, &str, &str))>>()
         ).and_then(|_| self.read_fields::<Sticker>("sticker")).map(
             |stickers| {stickers.into_iter().map(|s| (s.name, s.value)).collect()}
