@@ -350,7 +350,7 @@ impl<S: Read + Write> Client<S> {
 
     /// Close MPD connection
     pub fn close(&mut self) -> Result<()> {
-        self.run_command("close", ()).and_then(|_| self.expect_ok())
+        self.run_command("close", ())
     }
 
     /// Kill MPD server

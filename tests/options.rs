@@ -6,6 +6,12 @@ use mpd::{Idle, Song, State, Subsystem};
 use std::time::Duration;
 
 #[test]
+fn close() {
+    let mut mpd = connect();
+    mpd.close().expect("closing the connection should not fail");
+}
+
+#[test]
 fn status() {
     let mut mpd = connect();
     let status = mpd.status().unwrap();
