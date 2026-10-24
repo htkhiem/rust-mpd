@@ -8,12 +8,12 @@ use bufstream::BufStream;
 
 use crate::convert::*;
 use crate::error::{Error, ProtoError, Result};
+use crate::list::GroupedValues;
 use crate::lsinfo::LsInfoEntry;
 use crate::message::{Channel, Message};
 use crate::mount::{Mount, Neighbor};
 use crate::output::Output;
-use crate::list::{GroupedValues};
-use crate::playlist::{Playlist, EditAction, SaveMode};
+use crate::playlist::{EditAction, Playlist, SaveMode};
 use crate::plugin::Plugin;
 use crate::proto::*;
 use crate::search::{Query, Term, Window};
@@ -33,7 +33,8 @@ use std::net::{TcpStream, ToSocketAddrs};
 /// Client connection
 #[derive(Debug)]
 pub struct Client<S = TcpStream>
-where S: Read + Write
+where
+    S: Read + Write,
 {
     socket: BufStream<S>,
     /// MPD protocol version
@@ -263,14 +264,9 @@ impl<S: Read + Write> Client<S> {
     /// as it makes use of the command list interface, sending all commands at once and receiving a
     /// single reply. It will also only trigger a single idle message to other clients.
     pub fn push_multiple<P: ToSongPath>(&mut self, paths: &[P]) -> Result<Vec<Id>> {
-        self.run_command_list(
-            &paths
-                .iter()
-                .map(|p: &P| {("addid", p)})
-                .collect::<Vec<(&str, &P)>>()
-        ).and_then(|_| self.read_fields::<u32>("Id")).map(
-            |ids| {ids.iter().map(|id| {Id(*id)}).collect()}
-        )
+        self.run_command_list(&paths.iter().map(|p: &P| ("addid", p)).collect::<Vec<(&str, &P)>>())
+            .and_then(|_| self.read_fields::<u32>("Id"))
+            .map(|ids| ids.iter().map(|id| Id(*id)).collect())
     }
 
     /// Insert a song into a given position in a queue
@@ -289,10 +285,10 @@ impl<S: Read + Write> Client<S> {
                     pos += 1;
                     ("addid", (p, current_pos))
                 })
-                .collect::<Vec<(&str, (&P, usize))>>()
-        ).and_then(|_| self.read_fields::<u32>("Id")).map(
-            |ids| {ids.iter().map(|id| {*id as usize}).collect()}
+                .collect::<Vec<(&str, (&P, usize))>>(),
         )
+        .and_then(|_| self.read_fields::<u32>("Id"))
+        .map(|ids| ids.iter().map(|id| *id as usize).collect())
     }
 
     /// Delete a song (at some position) or several songs (in a range) from a queue
@@ -377,8 +373,7 @@ impl<S: Read + Write> Client<S> {
     pub fn playlist<T: ToQueueRange, N: ToPlaylistName>(&mut self, name: N, range: Option<T>) -> Result<Vec<Song>> {
         if let Some(range) = range {
             self.run_command("listplaylistinfo", (name.to_name(), range.to_range())).and_then(|_| self.read_structs("file"))
-        }
-        else {
+        } else {
             self.run_command("listplaylistinfo", name.to_name()).and_then(|_| self.read_structs("file"))
         }
     }
@@ -395,8 +390,7 @@ impl<S: Read + Write> Client<S> {
     pub fn save<N: ToPlaylistName>(&mut self, name: N, mode: Option<SaveMode>) -> Result<()> {
         if let Some(mode) = mode {
             self.run_command("save", (name.to_name(), mode.as_str())).and_then(|_| self.expect_ok())
-        }
-        else {
+        } else {
             self.run_command("save", name.to_name()).and_then(|_| self.expect_ok())
         }
     }
@@ -435,7 +429,8 @@ impl<S: Read + Write> Client<S> {
     /// They will be executed sequentially but will only result in one idle message being
     /// sent out to clients, avoiding repeated refreshes.
     pub fn pl_edit(&mut self, actions: &[EditAction]) -> Result<()> {
-        self.socket.write_all("command_list_begin".as_bytes())
+        self.socket
+            .write_all("command_list_begin".as_bytes())
             .and_then(|_| self.socket.write(&[0x0a]))
             .and_then(|_| self.socket.flush())?;
 
@@ -446,10 +441,11 @@ impl<S: Read + Write> Client<S> {
                 .and_then(|_| self.socket.write(&[0x0a]))
                 .and_then(|_| self.socket.flush())?;
         }
-        self.socket.write_all("command_list_end".as_bytes())
+        self.socket
+            .write_all("command_list_end".as_bytes())
             .and_then(|_| self.socket.write(&[0x0a]))
             .and_then(|_| self.socket.flush())
-            .inspect(|r| {println!("{:?}", &r)})
+            .inspect(|r| println!("{:?}", &r))
             .map_err(From::from)
             .and_then(|_| self.expect_ok())
     }
@@ -465,6 +461,31 @@ impl<S: Read + Write> Client<S> {
     /// Run database update, i.e. remove non-existing files from DB
     pub fn update(&mut self) -> Result<u32> {
         self.run_command("update", ()).and_then(|_| self.read_field("updating_db"))
+    }
+
+    /// Count the number of songs in the database matching the given query.
+    ///
+    /// It reads the database on every call, in contrast to `stats`, whose
+    /// results are cached until the update thread finishes).
+    ///
+    /// Currently with a `group` the returned number is their sum. TODO: actually
+    /// return per-song counts. This fork is mainly used by Euphonica which
+    /// doesn't need that `group`ing yet.
+    pub fn count(&mut self, query: &Query, group: Option<&str>) -> Result<u32> {
+        if let Some(group) = group {
+            self.run_command("count", (query, "group", group))?;
+        } else {
+            self.run_command("count", (query,))?;
+        }
+        let mut total = 0;
+        for pair in self.read_pairs() {
+            let (key, value) = pair?;
+            if key == "songs" {
+                let n: u32 = value.parse()?;
+                total += n;
+            }
+        }
+        Ok(total)
     }
     // }}}
 
@@ -482,7 +503,9 @@ impl<S: Read + Write> Client<S> {
 
     /// Find songs matching Query conditions.
     pub fn find<W>(&mut self, query: &Query, window: W) -> Result<Vec<Song>>
-    where W: Into<Window> {
+    where
+        W: Into<Window>,
+    {
         self.find_generic("find", query, window.into())
     }
 
@@ -504,11 +527,11 @@ impl<S: Read + Write> Client<S> {
         for (query, window) in queries_windows.into_iter() {
             self.run_command("find", (query, *window))?;
         }
-        let res = self.run_command("command_list_end", ())
-            .and_then(|_| self.read_structs("file"));
+        let res = self.run_command("command_list_end", ()).and_then(|_| self.read_structs("file"));
 
         if let Some(old_tagtypes) = old_tagtypes {
-            self.tagtypes_clear().and_then(|_| self.tagtypes_enable(&old_tagtypes.iter().map(String::as_ref).collect::<Vec<&str>>()))?;
+            self.tagtypes_clear()
+                .and_then(|_| self.tagtypes_enable(&old_tagtypes.iter().map(String::as_ref).collect::<Vec<&str>>()))?;
         }
         res
     }
@@ -561,7 +584,9 @@ impl<S: Read + Write> Client<S> {
 
     /// Case-insensitively search for songs matching Query conditions.
     pub fn search<W>(&mut self, query: &Query, window: W) -> Result<Vec<Song>>
-    where W: Into<Window> {
+    where
+        W: Into<Window>,
+    {
         self.find_generic("search", query, window.into())
     }
 
@@ -575,18 +600,13 @@ impl<S: Read + Write> Client<S> {
     // It isn't clear if or how `group` works
     pub fn list(&mut self, term: &Term, query: &Query, group: Option<&str>) -> Result<GroupedValues> {
         if let Some(group) = group {
-            self.run_command("list", (term, query, "group", group)).and_then(|_| GroupedValues::from_pairs_with_sep(&mut self.read_pairs(), group.to_lowercase().as_str()))
-        }
-        else {
-            self.run_command("list", (term, query))
-                .and_then(|_| {
-                    let vals = self.read_pairs().map(|p| p.map(|p| p.1)).collect::<Result<Vec<String>>>()?;
-                    Ok(
-                        GroupedValues {
-                            groups: vec![("".to_string(), vals)]
-                        }
-                    )
-                })
+            self.run_command("list", (term, query, "group", group))
+                .and_then(|_| GroupedValues::from_pairs_with_sep(&mut self.read_pairs(), group.to_lowercase().as_str()))
+        } else {
+            self.run_command("list", (term, query)).and_then(|_| {
+                let vals = self.read_pairs().map(|p| p.map(|p| p.1)).collect::<Result<Vec<String>>>()?;
+                Ok(GroupedValues { groups: vec![("".to_string(), vals)] })
+            })
         }
     }
 
@@ -765,19 +785,14 @@ impl<S: Read + Write> Client<S> {
 
     /// Command-list version of set_sticker, meant for atomically setting multiple stickers at once.
     pub fn set_stickers(&mut self, typ: &str, uri: &str, names_values: &[(&str, &str)]) -> Result<()> {
-        let commands: Vec<(&str, (&str, &str, &str, &str))> = names_values
-            .iter()
-            .map(|&(name, value)| ("sticker set", (typ, uri, name, value)))
-            .collect();
+        let commands: Vec<(&str, (&str, &str, &str, &str))> =
+            names_values.iter().map(|&(name, value)| ("sticker set", (typ, uri, name, value))).collect();
         self.run_command_list(&commands).and_then(|_| self.expect_ok())
     }
 
     /// Command-list version of delete_sticker, meant for atomically deleting multiple stickers at once.
     pub fn delete_stickers(&mut self, typ: &str, uri: &str, names: &[&str]) -> Result<()> {
-        let commands: Vec<(&str, (&str, &str, &str))> = names
-            .iter()
-            .map(|&name| ("sticker delete", (typ, uri, name)))
-            .collect();
+        let commands: Vec<(&str, (&str, &str, &str))> = names.iter().map(|&name| ("sticker delete", (typ, uri, name))).collect();
         self.run_command_list(&commands).and_then(|_| self.expect_ok())
     }
 
@@ -813,25 +828,16 @@ impl<S: Read + Write> Client<S> {
 
     /// Command-list version of sticker(), meant for atomically getting multiple stickers at once.
     pub fn get_stickers(&mut self, typ: &str, uri: &str, names: &[&str]) -> Result<Vec<(String, String)>> {
-        self.run_command_list(
-            &names
-                .iter()
-                .map(|&name| ("sticker get", (typ, uri, name)))
-                .collect::<Vec<(&str, (&str, &str, &str))>>()
-        ).and_then(|_| self.read_fields::<Sticker>("sticker")).map(
-            |stickers| {stickers.into_iter().map(|s| (s.name, s.value)).collect()}
-        )
+        self.run_command_list(&names.iter().map(|&name| ("sticker get", (typ, uri, name))).collect::<Vec<(&str, (&str, &str, &str))>>())
+            .and_then(|_| self.read_fields::<Sticker>("sticker"))
+            .map(|stickers| stickers.into_iter().map(|s| (s.name, s.value)).collect())
     }
 
     /// List all (file, sticker) pairs for sticker name and objects of given type
     /// from given directory (identified by uri)
     pub fn find_sticker<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, window: W) -> Result<Vec<(String, String)>> {
         let lower_typ = typ.to_lowercase();
-        let delim = if &lower_typ == "song" {
-            &String::from("file")
-        } else {
-            &lower_typ
-        };
+        let delim = if &lower_typ == "song" { &String::from("file") } else { &lower_typ };
         self.run_command("sticker find", (&lower_typ, uri, name, window.into())).and_then(|_| {
             self.read_pairs()
                 .split(delim)
@@ -854,24 +860,18 @@ impl<S: Read + Write> Client<S> {
     /// with a sticker set to given value
     pub fn find_sticker_eq<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, value: &str, window: W) -> Result<Vec<String>> {
         let lower_typ = typ.to_lowercase();
-        let delim = if &lower_typ == "song" {
-            String::from("file")
-        } else {
-            lower_typ
-        };
+        let delim = if &lower_typ == "song" { String::from("file") } else { lower_typ };
         self.run_command("sticker find", (typ, uri, name, "=", value, window.into())).and_then(|_| self.read_list(&delim))
     }
 
     /// List all files of a given type under given directory (identified by uri)
     /// with a sticker matching a certain condition. This is more general than
     /// find_sticker_eq in that it allows for operators other than "=".
-    pub fn find_sticker_op<W: Into<Window>>(&mut self, typ: &str, uri: &str, name: &str, op: &str, value: &str, window: W) -> Result<Vec<String>> {
+    pub fn find_sticker_op<W: Into<Window>>(
+        &mut self, typ: &str, uri: &str, name: &str, op: &str, value: &str, window: W,
+    ) -> Result<Vec<String>> {
         let lower_typ = typ.to_lowercase();
-        let delim = if &lower_typ == "song" {
-            String::from("file")
-        } else {
-            lower_typ
-        };
+        let delim = if &lower_typ == "song" { String::from("file") } else { lower_typ };
         self.run_command("sticker find", (typ, uri, name, op, value, window.into())).and_then(|_| self.read_list(&delim))
     }
 
@@ -929,8 +929,11 @@ impl<S: Read + Write> Proto for Client<S> {
     // }
 
     fn run_command_list<I>(&mut self, commands_args: &[(&str, I)]) -> Result<()>
-    where I: ToArguments {
-        self.socket.write_all("command_list_begin".as_bytes())
+    where
+        I: ToArguments,
+    {
+        self.socket
+            .write_all("command_list_begin".as_bytes())
             .and_then(|_| self.socket.write(&[0x0a]))
             .and_then(|_| self.socket.flush())?;
 
@@ -941,14 +944,17 @@ impl<S: Read + Write> Proto for Client<S> {
                 .and_then(|_| self.socket.write(&[0x0a]))
                 .and_then(|_| self.socket.flush())?;
         }
-        self.socket.write_all("command_list_end".as_bytes())
+        self.socket
+            .write_all("command_list_end".as_bytes())
             .and_then(|_| self.socket.write(&[0x0a]))
             .and_then(|_| self.socket.flush())
             .map_err(From::from)
     }
 
     fn run_command<I>(&mut self, command: &str, arguments: I) -> Result<()>
-    where I: ToArguments {
+    where
+        I: ToArguments,
+    {
         self.socket
             .write_all(command.as_bytes())
             .and_then(|_| arguments.to_arguments(&mut |arg| write!(self.socket, " {}", Quoted(arg))))
