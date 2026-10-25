@@ -688,22 +688,34 @@ impl<S: Read + Write> Client<S> {
 
     /// Enable these tag types in future responses
     pub fn tagtypes_enable(&mut self, tagtypes: &[&str]) -> Result<()> {
-        self.run_command("tagtypes enable", tagtypes).and_then(|_| self.expect_ok())
+        self.run_command("tagtypes enable", tagtypes)
+            .and_then(|_| self.read_tagtypes_or_ok())
     }
 
     /// Enable all tag types in future responses
     pub fn tagtypes_all(&mut self) -> Result<()> {
-        self.run_command("tagtypes all", ()).and_then(|_| self.expect_ok())
+        self.run_command("tagtypes all", ()).and_then(|_| self.read_tagtypes_or_ok())
     }
 
     /// Disable these tag types in future responses
     pub fn tagtypes_disable(&mut self, tagtypes: &[&str]) -> Result<()> {
-        self.run_command("tagtypes disable", tagtypes).and_then(|_| self.expect_ok())
+        self.run_command("tagtypes disable", tagtypes).and_then(|_| self.read_tagtypes_or_ok())
     }
 
     /// Disable all tag types in future responses
     pub fn tagtypes_clear(&mut self) -> Result<()> {
-        self.run_command("tagtypes clear", ()).and_then(|_| self.expect_ok())
+        self.run_command("tagtypes clear", ()).and_then(|_| self.read_tagtypes_or_ok())
+    }
+
+    /// Read a `tagtypes [all|clear|enable tag|disable tag]` response, which per the MPD
+    /// protocol is a bare `OK`. Some servers like OwnTone (htkhiem/euphonica issue #$321)
+    /// however replies as if the bare `tagtypes` command was called. This eats up all the
+    /// returned tagtypes so as to remain compatible. Unsure if those servers really turn
+    /// tagtypes on or off, but at least we won't err out.
+    /// Server `ACK` errors are still surfaced.
+    #[inline]
+    fn read_tagtypes_or_ok(&mut self) -> Result<()> {
+        self.read_list("tagtype").map(|_| ())
     }
 
     /// List all available decoder plugins
