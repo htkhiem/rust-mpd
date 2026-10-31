@@ -1,6 +1,6 @@
 //! The module defines playlist data structures
 
-use crate::convert::FromMap;
+use crate::convert::{FromIter, FromMap};
 use crate::error::{Error, ProtoError};
 use crate::proto::*;
 
@@ -91,19 +91,27 @@ impl<'a> EditAction<'a> {
 
 /// Playlist
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct Playlist {
     /// name
     pub name: String,
     /// last modified
-    pub last_mod: String,
+    pub last_mod: Option<String>,
 }
 
-impl FromMap for Playlist {
-    fn from_map(map: BTreeMap<String, String>) -> Result<Playlist, Error> {
-        Ok(Playlist {
-            name: map.get("playlist").map(|v| v.to_owned()).ok_or(Error::Proto(ProtoError::NoField("playlist")))?,
-            last_mod: map.get("Last-Modified").map(|v| v.to_owned()).ok_or(Error::Proto(ProtoError::NoField("Last-Modified")))?,
-        })
+impl FromIter for Playlist {
+    fn from_iter<I: Iterator<Item = Result<(String, String), Error>>>(iter: I) -> Result<Playlist, Error> {
+        let mut result = Playlist::default();
+
+        for res in iter {
+            let line = res?;
+            match &*line.0 {
+                "playlist" => result.name = line.1.to_owned(),
+                "Last-Modified" => result.last_mod = Some(line.1.to_owned()),
+                _ => {}
+            }
+        }
+
+        Ok(result)
     }
 }
