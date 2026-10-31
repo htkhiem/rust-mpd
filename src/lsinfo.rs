@@ -2,6 +2,7 @@
 
 use crate::convert::FromIter;
 use crate::directory::Directory;
+use crate::playlist::Playlist;
 use crate::error::{Error, ParseError, ProtoError};
 use crate::song::Song;
 
@@ -11,8 +12,9 @@ pub enum LsInfoEntry {
     /// A file that is an MPD-recognised song
     Song(Song),
     /// A directory
-    Directory(Directory)
-    // TODO: playlist
+    Directory(Directory),
+    /// A playlist, such as an M3U file
+    Playlist(Playlist)
 }
 
 impl FromIter for LsInfoEntry {
@@ -20,8 +22,6 @@ impl FromIter for LsInfoEntry {
     fn from_iter<I: Iterator<Item = Result<(String, String), Error>>>(mut iter: I) -> Result<LsInfoEntry, Error> {
         // Peek at the first element to see if we're dealing with a directory
         // or a song file.
-        // TODO: add playlist support
-
         let maybe_first_elem = iter.next();
         if let Some(first_elem) = maybe_first_elem {
             if let Ok((k, v)) = first_elem {
@@ -37,6 +37,11 @@ impl FromIter for LsInfoEntry {
                         let mut song = Song::from_iter(iter)?;
                         song.file = v;
                         return Ok(LsInfoEntry::Song(song));
+                    },
+                    "playlist" => {
+                        let mut pl = Playlist::from_iter(iter)?;
+                        pl.name = v;  // full library path in name
+                        return Ok(LsInfoEntry::Playlist(pl));
                     },
                     _ => return Err(Error::Parse(ParseError::BadPair))
                 }
