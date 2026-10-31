@@ -617,8 +617,7 @@ impl<S: Read + Write> Client<S> {
 
     /// Lists the contents of a directory.
     pub fn lsinfo<P: ToSongPath>(&mut self, path: P) -> Result<Vec<LsInfoEntry>> {
-        // TODO: add playlist support
-        self.run_command("lsinfo", path).and_then(|_| self.read_multisep_structs(&["file", "directory"]))
+        self.run_command("lsinfo", path).and_then(|_| self.read_multisep_structs(&["file", "directory", "playlist"]))
     }
 
     /// Returns raw metadata for file
