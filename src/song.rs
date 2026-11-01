@@ -80,7 +80,9 @@ impl FromStr for Range {
     }
 }
 
-/// Song data
+/// Song data.
+/// In this fork we'll parse more fields than mainline, so downstream Euphonica doesn't
+/// have to match them all again.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Song {
@@ -92,14 +94,34 @@ pub struct Song {
     pub title: Option<String>,
     /// last modification time
     pub last_mod: Option<String>,
-    /// artist
-    pub artist: Option<String>,
+    /// MBID of track
+    pub mbid: Option<String>,
+    /// artists
+    pub artists: Vec<String>,
+    /// sortable artists
+    pub artistsorts: Vec<String>,
+    /// artist MBIDs (order as received)
+    pub artist_mbids: Vec<String>,
+    /// AlbumArtists
+    pub albumartists: Vec<String>,
+    /// sortable AlbumArtists
+    pub albumartistsorts: Vec<String>,
+    /// AlbumArtist MBIDs (order as received)
+    pub albumartist_mbids: Vec<String>,
     /// duration (in seconds resolution)
     pub duration: Option<Duration>,
     /// place in the queue (if queued for playback)
     pub place: Option<QueuePlace>,
     /// range to play (if queued for playback and range was set)
     pub range: Option<Range>,
+    /// album
+    pub album: Option<String>,
+    /// albumsort
+    pub albumsort: Option<String>,
+    /// album MBID
+    pub album_mbid: Option<String>,
+    /// genres
+    pub genres: Vec<String>,
     /// arbitrary tags, like album, artist etc
     pub tags: Vec<(String, String)>,
 }
@@ -110,29 +132,36 @@ impl FromIter for Song {
         let mut result = Song::default();
 
         for res in iter {
-            let line = res?;
+            let line = res.map(|(k, v)| (k.to_lowercase(), v))?;
             match &*line.0 {
-                "file" => result.file = line.1.to_owned(),
-                "Title" => result.title = Some(line.1.to_owned()),
-                "Last-Modified" => result.last_mod = Some(line.1.to_owned()),
-                "Artist" => result.artist = Some(line.1.to_owned()),
-                "Name" => result.name = Some(line.1.to_owned()),
-                // Deprecated in MPD.
-                "Time" => (),
+                "file" => result.file = line.1,
+                "name" => result.name = Some(line.1),
+                "title" => result.title = Some(line.1),
+                "last-modified" => result.last_mod = Some(line.1),
+                "musicbrainz_trackid" => result.mbid = Some(line.1),
+                "artist" => result.artists.push(line.1),
+                "artistsort" => result.artistsorts.push(line.1),
+                "musicbrainz_artistid" => result.artist_mbids.push(line.1),
+                "albumartist" => result.albumartists.push(line.1),
+                "albumartistsort" => result.albumartistsorts.push(line.1),
+                "musicbrainz_albumartistid" => result.artist_mbids.push(line.1),
                 "duration" => result.duration = Some(Duration::try_from_secs_f64(line.1.parse()?)?),
-                "Range" => result.range = Some(line.1.parse()?),
-                "Id" => match result.place {
+                "range" => result.range = Some(line.1.parse()?),
+                "id" => match result.place {
                     None => result.place = Some(QueuePlace { id: Id(line.1.parse()?), pos: 0, prio: 0 }),
                     Some(ref mut place) => place.id = Id(line.1.parse()?),
                 },
-                "Pos" => match result.place {
+                "pos" => match result.place {
                     None => result.place = Some(QueuePlace { pos: line.1.parse()?, id: Id(0), prio: 0 }),
                     Some(ref mut place) => place.pos = line.1.parse()?,
                 },
-                "Prio" => match result.place {
+                "prio" => match result.place {
                     None => result.place = Some(QueuePlace { prio: line.1.parse()?, id: Id(0), pos: 0 }),
                     Some(ref mut place) => place.prio = line.1.parse()?,
                 },
+                "album" => result.album = Some(line.1),
+                "albumsort" => result.albumsort = Some(line.1),
+                "musicbrainz_albumid" => result.album_mbid = Some(line.1),
                 _ => {
                     result.tags.push((line.0, line.1));
                 }
