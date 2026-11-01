@@ -125,6 +125,10 @@ pub struct Song {
     pub genres: Vec<String>,
     /// audio format
     pub format: Option<AudioFormat>,
+    /// original release date (first release)
+    pub original_date: Option<String>,
+    /// release date of this particular one (remaster, re-release, etc)
+    pub date: Option<String>,
     /// arbitrary tags, like album, artist etc
     pub tags: Vec<(String, String)>,
 }
@@ -166,6 +170,8 @@ impl FromIter for Song {
                 "albumsort" => result.albumsort = Some(line.1),
                 "musicbrainz_albumid" => result.album_mbid = Some(line.1),
                 "format" => result.format = line.1.parse::<AudioFormat>().ok(),
+                "originaldate" => result.original_date = Some(line.1),
+                "date" => result.date = Some(line.1),
                 _ => {
                     result.tags.push((line.0, line.1));
                 }
