@@ -129,6 +129,10 @@ pub struct Song {
     pub original_date: Option<String>,
     /// release date of this particular one (remaster, re-release, etc)
     pub date: Option<String>,
+    /// track index
+    pub track: Option<u32>,
+    /// disc index
+    pub disc: Option<u32>,
     /// arbitrary tags, like album, artist etc
     pub tags: Vec<(String, String)>,
 }
@@ -172,6 +176,8 @@ impl FromIter for Song {
                 "format" => result.format = line.1.parse::<AudioFormat>().ok(),
                 "originaldate" => result.original_date = Some(line.1),
                 "date" => result.date = Some(line.1),
+                "track" => result.track = line.1.parse().ok(),
+                "disc" => result.disc = line.1.parse().ok(),
                 _ => {
                     result.tags.push((line.0, line.1));
                 }
