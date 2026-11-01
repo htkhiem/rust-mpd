@@ -2,6 +2,7 @@
 
 use crate::convert::FromIter;
 use crate::error::{Error, ParseError};
+use crate::status::AudioFormat;
 
 use std::fmt;
 use std::str::FromStr;
@@ -122,6 +123,8 @@ pub struct Song {
     pub album_mbid: Option<String>,
     /// genres
     pub genres: Vec<String>,
+    /// audio format
+    pub format: Option<AudioFormat>,
     /// arbitrary tags, like album, artist etc
     pub tags: Vec<(String, String)>,
 }
@@ -162,6 +165,7 @@ impl FromIter for Song {
                 "album" => result.album = Some(line.1),
                 "albumsort" => result.albumsort = Some(line.1),
                 "musicbrainz_albumid" => result.album_mbid = Some(line.1),
+                "format" => result.format = line.1.parse::<AudioFormat>().ok(),
                 _ => {
                     result.tags.push((line.0, line.1));
                 }
