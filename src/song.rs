@@ -155,7 +155,7 @@ impl FromIter for Song {
                 "musicbrainz_artistid" => result.artist_mbids.push(line.1),
                 "albumartist" => result.albumartists.push(line.1),
                 "albumartistsort" => result.albumartistsorts.push(line.1),
-                "musicbrainz_albumartistid" => result.artist_mbids.push(line.1),
+                "musicbrainz_albumartistid" => result.albumartist_mbids.push(line.1),
                 "duration" => result.duration = Some(Duration::try_from_secs_f64(line.1.parse()?)?),
                 "range" => result.range = Some(line.1.parse()?),
                 "id" => match result.place {
