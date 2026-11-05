@@ -178,6 +178,7 @@ impl FromIter for Song {
                 "date" => result.date = Some(line.1),
                 "track" => result.track = line.1.parse().ok(),
                 "disc" => result.disc = line.1.parse().ok(),
+                "genre" => result.genres.push(line.1),
                 _ => {
                     result.tags.push((line.0, line.1));
                 }
