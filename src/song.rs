@@ -179,6 +179,7 @@ impl FromIter for Song {
                 "track" => result.track = line.1.parse().ok(),
                 "disc" => result.disc = line.1.parse().ok(),
                 "genre" => result.genres.push(line.1),
+                "time" => {},
                 _ => {
                     result.tags.push((line.0, line.1));
                 }
